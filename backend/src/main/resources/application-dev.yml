@@ -1,0 +1,13 @@
+spring:
+  jpa:
+    show-sql: true
+    generate-ddl: true
+    hibernate:
+      ddl-auto: create
+
+  flyway.enabled: false
+
+  datasource:
+    url: jdbc:postgresql://localhost:5432/everactive_dev
+    username: postgres
+    password: postgres

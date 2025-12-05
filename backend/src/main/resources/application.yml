@@ -1,1 +1,9 @@
-spring.application.name: backend
+spring:
+  application.name: everactive
+
+  flyway:
+    enabled: true
+    baseline-version: 1
+    baseline-on-migrate: true
+
+  profiles.active: dev
