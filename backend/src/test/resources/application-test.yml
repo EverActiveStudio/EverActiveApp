@@ -1,0 +1,11 @@
+spring:
+  jpa:
+    show-sql: true
+    generate-ddl: true
+    hibernate:
+      ddl-auto: create-drop
+
+  datasource:
+    url: ${TEST_DB_URL:jdbc:postgresql://localhost:5432/everactive_test}
+    username: ${TEST_DB_USER:postgres}
+    password: ${TEST_DB_PASSWORD:postgres}
