@@ -23,10 +23,17 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun AppNavigation() {
-    var currentScreen by remember { mutableStateOf("login") }
+    var currentScreen by remember { mutableStateOf("welcome") }
     val context = LocalContext.current
 
     when (currentScreen) {
+        "welcome" -> {
+            WelcomeScreen(
+                onStartShiftClick = {
+                    currentScreen = "login"
+                }
+            )
+        }
         "login" -> {
             LoginScreen(
                 onLoginSuccess = { username ->
