@@ -23,7 +23,8 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun AppNavigation() {
-    var currentScreen by remember { mutableStateOf("welcome") }
+    var currentScreen by remember { mutableStateOf("dashboard") }
+    var loggedInUser by remember { mutableStateOf("") }
     val context = LocalContext.current
 
     when (currentScreen) {
@@ -37,7 +38,9 @@ fun AppNavigation() {
         "login" -> {
             LoginScreen(
                 onLoginSuccess = { username ->
+                    loggedInUser = username
                     Toast.makeText(context, "Logged in as $username", Toast.LENGTH_SHORT).show()
+                    currentScreen = "dashboard"
                 },
                 onBackClick = {
                     currentScreen = "welcome"
@@ -60,6 +63,16 @@ fun AppNavigation() {
                 },
                 onBackToLoginClick = {
                     currentScreen = "login"
+                }
+            )
+        }
+
+        "dashboard" -> {
+            DashboardScreen(
+                username = loggedInUser,
+                onLogoutClick = {
+                    currentScreen = "welcome"
+                    loggedInUser = ""
                 }
             )
         }
