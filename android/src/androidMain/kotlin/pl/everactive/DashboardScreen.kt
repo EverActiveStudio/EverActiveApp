@@ -1,6 +1,8 @@
 package pl.everactive
 
 import androidx.compose.animation.*
+import androidx.compose.animation.core.*
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -10,6 +12,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Logout
+import androidx.compose.material.icons.filled.Logout
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Sos
 import androidx.compose.material3.*
@@ -17,7 +20,13 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -36,18 +45,23 @@ fun DashboardScreen(
     onLogoutClick: () -> Unit
 ) {
     var isShiftActive by remember { mutableStateOf(false) }
-    var shiftDurationSeconds by remember { mutableLongStateOf(0L) }
+    var currentShiftMillis by remember { mutableLongStateOf(0L) }
+    val shiftDurationSeconds = currentShiftMillis / 1000
 
     var alertStatus by remember { mutableStateOf(AlertStatus.NONE) }
     var pendingTimeRemaining by remember { mutableIntStateOf(5) }
 
+    val continuousEasing = remember { CubicBezierEasing(0.5f, 0.2f, 0.5f, 0.8f) }
+
     LaunchedEffect(isShiftActive) {
         if (isShiftActive) {
-            val startTime = System.currentTimeMillis() - (shiftDurationSeconds * 1000)
+            val startTime = System.currentTimeMillis()
             while (isShiftActive) {
-                delay(1000)
-                shiftDurationSeconds = (System.currentTimeMillis() - startTime) / 1000
+                currentShiftMillis = System.currentTimeMillis() - startTime
+                delay(16)
             }
+        } else {
+            currentShiftMillis = 0L
         }
     }
 
@@ -63,6 +77,8 @@ fun DashboardScreen(
             }
         }
     }
+
+    val primaryColor = MaterialTheme.colorScheme.primary
 
     Surface(
         modifier = Modifier.fillMaxSize(),
@@ -88,7 +104,7 @@ fun DashboardScreen(
                     Text(
                         text = if (isShiftActive) "MONITORING ACTIVE" else "Status: Idle",
                         style = MaterialTheme.typography.labelMedium,
-                        color = if (isShiftActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                        color = if (isShiftActive) primaryColor else MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
                 IconButton(onClick = onLogoutClick) {
@@ -153,6 +169,49 @@ fun DashboardScreen(
                 contentAlignment = Alignment.Center,
                 modifier = Modifier.size(260.dp)
             ) {
+                if (isShiftActive) {
+                    Canvas(modifier = Modifier.fillMaxSize()) {
+                        val elapsedMillis = currentShiftMillis
+                        val strokeWidth = 3.dp.toPx()
+                        val radius = (size.minDimension - strokeWidth) / 2
+
+                        val linearProgress = (elapsedMillis % 1000) / 1000f
+                        val easedProgress = continuousEasing.transform(linearProgress)
+
+                        val rotationDegrees = easedProgress * 360f
+                        val finalRotation = rotationDegrees - 90f
+
+                        val growth = (elapsedMillis / 1000f).coerceIn(0f, 1f)
+                        val sweepLimit = if (elapsedMillis < 1000L) rotationDegrees else 360f
+                        val sweepAngle = (360f * growth).coerceAtMost(sweepLimit)
+
+                        val startAngle = 360f - sweepAngle
+
+                        withTransform({
+                            rotate(degrees = finalRotation, pivot = center)
+                        }) {
+                            val radarBrush = Brush.sweepGradient(
+                                colorStops = arrayOf(
+                                    0.0f to Color.Transparent,
+                                    0.5f to primaryColor.copy(alpha = 0.1f),
+                                    0.8f to primaryColor.copy(alpha = 0.5f),
+                                    1.0f to primaryColor
+                                )
+                            )
+
+                            drawArc(
+                                brush = radarBrush,
+                                startAngle = startAngle,
+                                sweepAngle = sweepAngle,
+                                useCenter = false,
+                                topLeft = Offset(center.x - radius, center.y - radius),
+                                size = Size(radius * 2, radius * 2),
+                                style = Stroke(width = strokeWidth, cap = StrokeCap.Round)
+                            )
+                        }
+                    }
+                }
+
                 Box(
                     contentAlignment = Alignment.Center,
                     modifier = Modifier
@@ -174,9 +233,6 @@ fun DashboardScreen(
                             indication = null
                         ) {
                             isShiftActive = !isShiftActive
-                            if (!isShiftActive) {
-                                shiftDurationSeconds = 0
-                            }
                         }
                 ) {
                     Column(
@@ -186,7 +242,7 @@ fun DashboardScreen(
                             Text(
                                 text = "ON DUTY",
                                 style = MaterialTheme.typography.labelMedium,
-                                color = MaterialTheme.colorScheme.primary,
+                                color = primaryColor,
                                 letterSpacing = 1.sp
                             )
                             Spacer(modifier = Modifier.height(4.dp))
@@ -209,7 +265,7 @@ fun DashboardScreen(
                             Icon(
                                 imageVector = Icons.Default.PlayArrow,
                                 contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f),
+                                tint = primaryColor.copy(alpha = 0.8f),
                                 modifier = Modifier.size(56.dp)
                             )
                             Spacer(modifier = Modifier.height(4.dp))
