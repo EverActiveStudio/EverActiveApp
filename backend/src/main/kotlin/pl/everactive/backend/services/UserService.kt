@@ -1,6 +1,9 @@
 package pl.everactive.backend.services
 
 import io.konform.validation.Invalid
+import org.springframework.security.core.userdetails.UserDetails
+import org.springframework.security.core.userdetails.UserDetailsService
+import org.springframework.security.core.userdetails.UsernameNotFoundException
 import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.stereotype.Service
 import pl.everactive.backend.config.Role
@@ -12,7 +15,11 @@ import pl.everactive.shared.dtos.RegisterRequest
 class UserService(
     private val userRepository: UserRepository,
     private val passwordEncoder: PasswordEncoder,
-) {
+): UserDetailsService {
+    override fun loadUserByUsername(username: String): UserDetails =
+        userRepository.findByEmail(username)
+            ?: throw UsernameNotFoundException.fromUsername(username)
+
     fun register(request: RegisterRequest): RegistrationResult {
         val validationResult = RegisterRequest.validate(request)
         if (validationResult is Invalid) {
