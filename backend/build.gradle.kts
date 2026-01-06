@@ -18,13 +18,17 @@ repositories {
 
 dependencies {
     implementation(projects.shared)
+
     implementation(libs.spring.boot.starter.data.jpa)
     implementation(libs.spring.boot.starter.security)
     implementation(libs.spring.boot.starter.flyway)
     implementation(libs.spring.boot.starter.webmvc)
     implementation(libs.jackson.module.kotlin)
-    implementation(libs.kotlin.reflect)
     implementation(libs.flyway.postgresql)
+
+    implementation(libs.kotlin.reflect)
+    implementation(libs.kotlinx.coroutines.core)
+    implementation(libs.kotlinx.coroutines.reactor)
 
     runtimeOnly(libs.postgresql)
 
