@@ -7,6 +7,7 @@ plugins {
     alias(libs.plugins.kotlinSpring)
     alias(libs.plugins.kotlinJpa)
     alias(libs.plugins.kotlinAllOpen)
+    alias(libs.plugins.kotlinSerialization)
 
     alias(libs.plugins.spring)
     alias(libs.plugins.springDependencyManagement)
@@ -23,12 +24,14 @@ dependencies {
     implementation(libs.spring.boot.starter.security)
     implementation(libs.spring.boot.starter.flyway)
     implementation(libs.spring.boot.starter.webmvc)
-    implementation(libs.jackson.module.kotlin)
     implementation(libs.flyway.postgresql)
+
+    implementation(libs.spring.boot.starter.oauth2.resource.server)
 
     implementation(libs.kotlin.reflect)
     implementation(libs.kotlinx.coroutines.core)
     implementation(libs.kotlinx.coroutines.reactor)
+    implementation(libs.kotlinx.serialization.json)
 
     runtimeOnly(libs.postgresql)
 

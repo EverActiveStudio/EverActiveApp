@@ -10,3 +10,6 @@ spring:
     hibernate.dialect: org.hibernate.dialect.PostgreSQLDialect
 
   profiles.active: dev
+
+everactive:
+  jwt.expiration: 1h

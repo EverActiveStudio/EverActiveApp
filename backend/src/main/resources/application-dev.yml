@@ -13,3 +13,7 @@ spring:
     url: jdbc:postgresql://localhost:5432/everactive_dev
     username: postgres
     password: postgres
+
+# openssl rand -hex 32
+everactive:
+  jwt.secret: 77896db876c9bee3f9f6dc94a72e0e7084f144b3fe3fa21d40d6dac2db4cbfa7
