@@ -19,6 +19,7 @@ spring = "4.0.0"
 spring-dependency-management = "1.1.7"
 foundation = "1.10.0"
 kotlinx-serialization = "1.9.0"
+konform = "0.11.1"
 
 [libraries]
 kotlin-reflect = { module = "org.jetbrains.kotlin:kotlin-reflect" }
@@ -38,6 +39,7 @@ spring-boot-starter-webmvc-test = { module = "org.springframework.boot:spring-bo
 junit-platform-launcher = { module = "org.junit.platform:junit-platform-launcher" }
 jackson-module-kotlin = { module = "com.fasterxml.jackson.module:jackson-module-kotlin" }
 kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinx-serialization" }
+konform = { module = "io.konform:konform", version.ref = "konform" }
 flyway-postgresql = { module = "org.flywaydb:flyway-database-postgresql" }
 spring-boot-starter-oauth2-resource-server = { module = "org.springframework.boot:spring-boot-starter-oauth2-resource-server" }
 

@@ -7,4 +7,5 @@ import pl.everactive.backend.entities.UserEntity
 @Repository
 interface UserRepository : JpaRepository<UserEntity, Long> {
     fun findByEmail(email: String): UserEntity?
+    fun existsByEmail(email: String): Boolean
 }

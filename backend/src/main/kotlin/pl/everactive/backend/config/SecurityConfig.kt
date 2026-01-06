@@ -27,10 +27,11 @@ import javax.crypto.spec.SecretKeySpec
 class SecurityConfig(
     private val props: JwtProperties,
 ) {
-    private val secretKeySpec get() = SecretKeySpec(
-        props.secret.toByteArray(),
-        "HmacSHA256"
-    )
+    private val secretKeySpec
+        get() = SecretKeySpec(
+            props.secret.toByteArray(),
+            "HmacSHA256"
+        )
 
     @Bean
     fun securityFilterChain(http: HttpSecurity): SecurityFilterChain {
@@ -41,6 +42,7 @@ class SecurityConfig(
 
             authorizeHttpRequests {
                 authorize("/api/auth/login", permitAll)
+                authorize("/api/auth/register", permitAll)
 
                 authorize(anyRequest, authenticated)
             }

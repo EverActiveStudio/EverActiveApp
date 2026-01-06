@@ -33,6 +33,8 @@ dependencies {
     implementation(libs.kotlinx.coroutines.reactor)
     implementation(libs.kotlinx.serialization.json)
 
+    implementation(libs.konform)
+
     runtimeOnly(libs.postgresql)
 
     testImplementation(libs.spring.boot.starter.data.jpa.test)
