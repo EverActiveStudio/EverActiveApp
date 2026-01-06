@@ -1,5 +1,5 @@
 create sequence users_id_seq
-    increment by 1;
+    increment by 50;
 
 create table users
 (

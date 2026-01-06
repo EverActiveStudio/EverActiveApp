@@ -6,6 +6,7 @@ import jakarta.persistence.GeneratedValue
 import jakarta.persistence.GenerationType
 import jakarta.persistence.Id
 import jakarta.persistence.Table
+import pl.everactive.backend.config.Role
 
 @Entity
 @Table(name = "users")
@@ -22,4 +23,7 @@ class UserEntity(
 
     @Column(nullable = false, length = 255)
     var password: String,
+
+    @Column(nullable = false, length = 31)
+    var role: Role,
 )
