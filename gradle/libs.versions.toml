@@ -59,9 +59,10 @@ kotlinSpring = { id = "org.jetbrains.kotlin.plugin.spring", version.ref = "kotli
 kotlinJpa = { id = "org.jetbrains.kotlin.plugin.jpa", version.ref = "kotlin" }
 kotlinAllOpen = { id = "org.jetbrains.kotlin.plugin.allopen", version.ref = "kotlin" }
 kotlinSerialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
+kotlinAndroid = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 
 androidApplication = { id = "com.android.application", version.ref = "agp" }
-androidLibrary = { id = "com.android.library", version.ref = "agp" }
+androidKMPLibrary = { id = "com.android.kotlin.multiplatform.library", version.ref = "agp" }
 composeMultiplatform = { id = "org.jetbrains.compose", version.ref = "composeMultiplatform" }
 composeCompiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 
