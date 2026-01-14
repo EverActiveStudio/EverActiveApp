@@ -10,8 +10,10 @@ import org.springframework.web.bind.annotation.RestController
 import pl.everactive.backend.services.TokenService
 import pl.everactive.backend.services.UserService
 import pl.everactive.backend.services.UserService.RegistrationResult
+import pl.everactive.shared.ApiResult
+import pl.everactive.shared.ApiResult.Error
+import pl.everactive.shared.ApiResult.Success
 import pl.everactive.shared.ApiRoutes
-import pl.everactive.shared.ErrorDto
 import pl.everactive.shared.dtos.LoginRequest
 import pl.everactive.shared.dtos.LoginResponse
 import pl.everactive.shared.dtos.RegisterRequest
@@ -34,7 +36,7 @@ class AuthController(
     }
 
     @PostMapping(ApiRoutes.AUTH_REGISTER)
-    fun register(@RequestBody request: RegisterRequest) = when (val result = userService.register(request)) {
+    fun register(@RequestBody request: RegisterRequest): ResponseEntity<ApiResult<LoginResponse>> = when (val result = userService.register(request)) {
         RegistrationResult.Success -> {
             val authentication = authenticationManager.authenticate(
                 UsernamePasswordAuthenticationToken(request.email, request.password)
@@ -42,17 +44,17 @@ class AuthController(
 
             val token = tokenService.generate(authentication)
 
-            ResponseEntity.ok(LoginResponse(token))
+            ResponseEntity.ok(Success(LoginResponse(token)))
         }
 
         RegistrationResult.AlreadyExists -> {
             ResponseEntity.status(HttpStatus.CONFLICT)
-                .build()
+                .body(Error(Error.Type.Conflict))
         }
 
         is RegistrationResult.Failure -> {
             ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                .body(ErrorDto(result.reason))
+                .body(Error(Error.Type.Validation, result.reason))
         }
     }
 }
