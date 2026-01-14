@@ -1,1 +1,15 @@
-spring.application.name: backend
+spring:
+  application.name: everactive
+
+  flyway:
+    enabled: true
+    baseline-version: 1
+    baseline-on-migrate: true
+
+  jpa.properties:
+    hibernate.dialect: org.hibernate.dialect.PostgreSQLDialect
+
+  profiles.active: dev
+
+everactive:
+  jwt.expiration: 1h

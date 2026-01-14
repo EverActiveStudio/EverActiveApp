@@ -1,37 +1,28 @@
-import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import com.android.build.api.dsl.androidLibrary
 
 plugins {
     alias(libs.plugins.kotlinMultiplatform)
-    alias(libs.plugins.androidLibrary)
+    alias(libs.plugins.androidKMPLibrary)
+    alias(libs.plugins.kotlinSerialization)
 }
 
 kotlin {
-    androidTarget {
-        compilerOptions {
-            jvmTarget.set(JvmTarget.JVM_11)
-        }
+    androidLibrary {
+        namespace = "pl.everactive.shared"
+
+        compileSdk = libs.versions.android.compileSdk.get().toInt()
+        minSdk = libs.versions.android.minSdk.get().toInt()
     }
 
     jvm()
 
     sourceSets {
         commonMain.dependencies {
+            implementation(libs.kotlinx.serialization.json)
+            implementation(libs.konform)
         }
         commonTest.dependencies {
             implementation(libs.kotlin.test)
         }
     }
-}
-
-android {
-    namespace = "pl.everactive.shared"
-    compileSdk = libs.versions.android.compileSdk.get().toInt()
-    compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
-    }
-    defaultConfig {
-        minSdk = libs.versions.android.minSdk.get().toInt()
-    }
-    buildToolsVersion = "35.0.0"
 }

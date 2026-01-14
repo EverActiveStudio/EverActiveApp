@@ -1,0 +1,14 @@
+spring:
+  jpa:
+    generate-ddl: false
+    hibernate:
+      ddl-auto: none
+
+  flyway.enabled: true
+
+  profiles.active: dev
+
+  datasource:
+    url: jdbc:postgresql://db:5432/everactive_dev
+    username: postgres
+    password: postgres
