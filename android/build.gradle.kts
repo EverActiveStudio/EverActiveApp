@@ -1,5 +1,3 @@
-import org.jetbrains.kotlin.gradle.dsl.JvmTarget
-
 plugins {
     alias(libs.plugins.kotlinAndroid)
     alias(libs.plugins.androidApplication)
@@ -45,6 +43,8 @@ kotlin {
 }
 
 dependencies {
+    implementation(projects.shared)
+
     implementation(compose.preview)
     implementation(libs.androidx.activity.compose)
     implementation(compose.runtime)
@@ -53,10 +53,15 @@ dependencies {
     implementation(compose.ui)
     implementation(compose.materialIconsExtended)
     implementation(compose.components.uiToolingPreview)
+
     implementation(libs.androidx.lifecycle.viewmodelCompose)
     implementation(libs.androidx.lifecycle.runtimeCompose)
-    implementation(projects.shared)
+    implementation(libs.androidx.datastore.preferences)
+
+    implementation(libs.bundles.ktor.client)
+
 
     testImplementation(libs.kotlin.test)
+
     debugImplementation(compose.uiTooling)
 }
