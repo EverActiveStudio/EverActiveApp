@@ -22,8 +22,14 @@ android {
         }
     }
     buildTypes {
-        getByName("release") {
+        release {
             isMinifyEnabled = false
+
+            buildConfigField("String", "API_BASE_URL", "\"\"")
+        }
+
+        debug {
+            buildConfigField("String", "API_BASE_URL", "\"${properties["debugApiBaseUrl"]}\"")
         }
     }
     compileOptions {
@@ -33,6 +39,7 @@ android {
 
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 
     buildToolsVersion = "35.0.0"
