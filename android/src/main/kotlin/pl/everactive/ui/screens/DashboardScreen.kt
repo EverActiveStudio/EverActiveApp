@@ -26,6 +26,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.withTransform
+import androidx.compose.ui.layout.WindowInsetsRulers
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -86,6 +87,7 @@ fun DashboardScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
+                .fitInside(WindowInsetsRulers.SafeDrawing.current)
                 .padding(24.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
