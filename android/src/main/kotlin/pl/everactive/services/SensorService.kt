@@ -1,6 +1,5 @@
 package pl.everactive.services
 
-import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
@@ -17,16 +16,15 @@ import kotlinx.coroutines.*
 import org.koin.android.ext.android.inject
 import pl.everactive.MainActivity
 import pl.everactive.R
-import pl.everactive.clients.EveractiveApiClient
-import pl.everactive.shared.EventDto
 import java.util.Collections
-import kotlin.math.abs
 import kotlin.math.pow
 import kotlin.math.sqrt
 
 class SensorService : Service(), SensorEventListener {
 
-    private val apiClient: EveractiveApiClient by inject()
+    // Inject AlertManager to trigger SOS flow centrally
+    private val alertManager: AlertManager by inject()
+
     private val serviceScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
     private lateinit var sensorManager: SensorManager
 
@@ -46,6 +44,7 @@ class SensorService : Service(), SensorEventListener {
     // UI/Notification helpers
     private var notificationBuilder: NotificationCompat.Builder? = null
     private val NOTIFICATION_ID = 1001
+    private val CHANNEL_ID = "SafetyMonitorChannel"
 
     override fun onBind(intent: Intent?): IBinder? = null
 
@@ -102,20 +101,20 @@ class SensorService : Service(), SensorEventListener {
         updateNotification("Impact detected! Verifying...")
 
         serviceScope.launch {
-            // Wait for data collection
+            // Wait for data collection window
             delay(CONFIRMATION_WINDOW_MS)
 
             // Analyze collected data
             analyzePostFallData()
 
-            // Reset flags
+            // Reset flags for next event
             isVerifyingFall = false
             postFallDataBuffer.clear()
         }
     }
 
     private suspend fun analyzePostFallData() {
-        // Copy data to avoid concurrency issues
+        // Copy data to local list to avoid concurrency issues during calculation
         val dataSnapshot = postFallDataBuffer.toList()
 
         if (dataSnapshot.isEmpty()) return
@@ -124,7 +123,6 @@ class SensorService : Service(), SensorEventListener {
         val average = dataSnapshot.average()
 
         // Calculate Standard Deviation to check device stability
-        // Low std dev = device is lying still. High std dev = movement/walking.
         var variance = 0.0
         for (value in dataSnapshot) {
             variance += (value - average).pow(2)
@@ -136,10 +134,10 @@ class SensorService : Service(), SensorEventListener {
 
         // Decision logic:
         if (stdDev < INACTIVITY_THRESHOLD) {
-            // Low deviation implies inactivity -> Alarm
+            // Low deviation implies inactivity -> Confirmed Man-Down
             triggerAlarm()
         } else {
-            // High deviation implies movement -> Cancel
+            // High deviation implies movement -> False alarm
             println("Alarm cancelled: Movement detected.")
             updateNotification("Alarm cancelled. Movement detected.")
             delay(3000)
@@ -149,31 +147,25 @@ class SensorService : Service(), SensorEventListener {
 
     private suspend fun triggerAlarm() {
         println("ALARM! MAN-DOWN CONFIRMED")
-        updateNotification("ALARM! SENDING ALERT...")
 
-        // TODO: Use specific "Fall" event type. Using "Ping" as placeholder.
-        val alarmEvent = EventDto.Ping(timestamp = System.currentTimeMillis())
-
-        val result = apiClient.pushEvents(listOf(alarmEvent))
-
-        if (result == null) {
-            updateNotification("Alert sent to HQ!")
-        } else {
-            updateNotification("Error sending alert!")
+        // Delegate alarm handling to AlertManager.
+        withContext(Dispatchers.Main) {
+            alertManager.triggerSOS()
         }
+
+        updateNotification("Fall detected! Sending alert...")
     }
 
     // --- Notification & System Section ---
 
     private fun startForegroundService() {
-        val channelId = "SafetyMonitorChannel"
         val manager = getSystemService(NotificationManager::class.java)
 
-        if (manager.getNotificationChannel(channelId) == null) {
+        if (manager.getNotificationChannel(CHANNEL_ID) == null) {
             val channel = NotificationChannel(
-                channelId,
+                CHANNEL_ID,
                 "Safety Monitor",
-                NotificationManager.IMPORTANCE_HIGH // High for visibility
+                NotificationManager.IMPORTANCE_HIGH
             )
             manager.createNotificationChannel(channel)
         }
@@ -181,7 +173,7 @@ class SensorService : Service(), SensorEventListener {
         val intent = Intent(this, MainActivity::class.java)
         val pendingIntent = PendingIntent.getActivity(this, 0, intent, PendingIntent.FLAG_IMMUTABLE)
 
-        notificationBuilder = NotificationCompat.Builder(this, channelId)
+        notificationBuilder = NotificationCompat.Builder(this, CHANNEL_ID)
             .setContentTitle("EverActive Guard")
             .setContentText("Monitoring active")
             .setSmallIcon(R.mipmap.ic_launcher_round)

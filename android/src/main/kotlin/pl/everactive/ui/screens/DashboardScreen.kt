@@ -7,6 +7,7 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -32,8 +33,11 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
+import org.koin.compose.koinInject
+import pl.everactive.services.AlertManager
 import pl.everactive.services.SensorService
 
+// Kept AlertStatus here as requested
 enum class AlertStatus {
     NONE,
     PENDING,
@@ -45,16 +49,24 @@ fun DashboardScreen(
     username: String,
     onLogoutClick: () -> Unit
 ) {
+    val context = LocalContext.current
+
+    // Inject Manager to handle logic (shared with Service)
+    val alertManager: AlertManager = koinInject()
+
+    // Observe state from Manager instead of local state
+    val alertStatus by alertManager.alertStatus.collectAsState()
+    val pendingTimeRemaining by alertManager.timeRemaining.collectAsState()
+
+    // Local UI variables (Animations, Shift Timer)
     var isShiftActive by remember { mutableStateOf(false) }
     var currentShiftMillis by remember { mutableLongStateOf(0L) }
     val shiftDurationSeconds = currentShiftMillis / 1000
 
-    var alertStatus by remember { mutableStateOf(AlertStatus.NONE) }
-    var pendingTimeRemaining by remember { mutableIntStateOf(5) }
-
     val continuousEasing = remember { CubicBezierEasing(0.5f, 0.2f, 0.5f, 0.8f) }
-    val context = LocalContext.current
+    val primaryColor = MaterialTheme.colorScheme.primary
 
+    // Shift Timer Logic
     LaunchedEffect(isShiftActive) {
         if (isShiftActive) {
             val startTime = System.currentTimeMillis()
@@ -66,21 +78,6 @@ fun DashboardScreen(
             currentShiftMillis = 0L
         }
     }
-
-    LaunchedEffect(alertStatus) {
-        if (alertStatus == AlertStatus.PENDING) {
-            pendingTimeRemaining = 5
-            while (pendingTimeRemaining > 0 && alertStatus == AlertStatus.PENDING) {
-                delay(1000)
-                pendingTimeRemaining--
-            }
-            if (alertStatus == AlertStatus.PENDING) {
-                alertStatus = AlertStatus.SENT
-            }
-        }
-    }
-
-    val primaryColor = MaterialTheme.colorScheme.primary
 
     Surface(
         modifier = Modifier.fillMaxSize(),
@@ -130,7 +127,7 @@ fun DashboardScreen(
                         title = "SENDING ALARM...",
                         buttonText = "CANCEL",
                         containerColor = Color(0xFFEF6C00),
-                        onButtonClick = { alertStatus = AlertStatus.NONE }
+                        onButtonClick = { alertManager.cancelSOS() }
                     ) {
                         Box(contentAlignment = Alignment.Center) {
                             CircularProgressIndicator(
@@ -153,7 +150,7 @@ fun DashboardScreen(
                         title = "ALARM SENT!",
                         buttonText = "CLOSE",
                         containerColor = Color(0xFFC62828),
-                        onButtonClick = { alertStatus = AlertStatus.NONE }
+                        onButtonClick = { alertManager.closeAlert() }
                     ) {
                         Text(
                             text = "Supervisor notified.",
@@ -169,7 +166,7 @@ fun DashboardScreen(
 
             Box(
                 contentAlignment = Alignment.Center,
-                modifier = Modifier.size(260.dp),
+                modifier = Modifier.size(260.dp)
             ) {
                 if (isShiftActive) {
                     Canvas(modifier = Modifier.fillMaxSize()) {
@@ -230,15 +227,17 @@ fun DashboardScreen(
                             color = if (isShiftActive) Color.Transparent else MaterialTheme.colorScheme.outline.copy(alpha=0.5f),
                             shape = CircleShape
                         )
-                        .clickable {
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null
+                        ) {
                             isShiftActive = !isShiftActive
 
+                            // Start/Stop Service
                             val intent = Intent(context, SensorService::class.java)
                             if (isShiftActive) {
-                                // Start monitoring
                                 context.startForegroundService(intent)
                             } else {
-                                // Stop monitoring
                                 context.stopService(intent)
                             }
                         }
@@ -293,9 +292,7 @@ fun DashboardScreen(
 
             Button(
                 onClick = {
-                    if (alertStatus == AlertStatus.NONE) {
-                        alertStatus = AlertStatus.PENDING
-                    }
+                    alertManager.triggerSOS()
                 },
                 modifier = Modifier
                     .fillMaxWidth()
