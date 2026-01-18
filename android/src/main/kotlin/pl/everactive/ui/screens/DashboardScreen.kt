@@ -1,5 +1,6 @@
 package pl.everactive
 
+import android.content.Intent
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.Canvas
@@ -26,11 +27,13 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.withTransform
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
+import pl.everactive.services.SensorService
 
 enum class AlertStatus {
     NONE,
@@ -51,6 +54,7 @@ fun DashboardScreen(
     var pendingTimeRemaining by remember { mutableIntStateOf(5) }
 
     val continuousEasing = remember { CubicBezierEasing(0.5f, 0.2f, 0.5f, 0.8f) }
+    val context = LocalContext.current
 
     LaunchedEffect(isShiftActive) {
         if (isShiftActive) {
@@ -166,7 +170,7 @@ fun DashboardScreen(
 
             Box(
                 contentAlignment = Alignment.Center,
-                modifier = Modifier.size(260.dp)
+                modifier = Modifier.size(260.dp),
             ) {
                 if (isShiftActive) {
                     Canvas(modifier = Modifier.fillMaxSize()) {
@@ -227,11 +231,17 @@ fun DashboardScreen(
                             color = if (isShiftActive) Color.Transparent else MaterialTheme.colorScheme.outline.copy(alpha=0.5f),
                             shape = CircleShape
                         )
-                        .clickable(
-                            interactionSource = remember { MutableInteractionSource() },
-                            indication = null
-                        ) {
+                        .clickable {
                             isShiftActive = !isShiftActive
+
+                            val intent = Intent(context, SensorService::class.java)
+                            if (isShiftActive) {
+                                // Start monitoring
+                                context.startForegroundService(intent)
+                            } else {
+                                // Stop monitoring
+                                context.stopService(intent)
+                            }
                         }
                 ) {
                     Column(
