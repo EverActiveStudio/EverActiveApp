@@ -19,23 +19,33 @@ import pl.everactive.MainActivity
 import pl.everactive.R
 import pl.everactive.clients.EveractiveApiClient
 import pl.everactive.shared.EventDto
+import java.util.Collections
 import kotlin.math.abs
+import kotlin.math.pow
 import kotlin.math.sqrt
 
 class SensorService : Service(), SensorEventListener {
 
     private val apiClient: EveractiveApiClient by inject()
-    private val serviceScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+    private val serviceScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
     private lateinit var sensorManager: SensorManager
 
-    private var lastMovementTime = System.currentTimeMillis()
-    private var stepsCounter = 0
-    private var isServiceRunning = false
+    // Threshold configuration
+    private val FALL_THRESHOLD = 25.0f      // ~2.5g (Initial impact)
+    private val INACTIVITY_THRESHOLD = 1.5f // Standard Deviation threshold (Motionless)
+    private val CONFIRMATION_WINDOW_MS = 10_000L // Post-fall analysis duration (10s)
 
-    // Configuration
-    private val REPORTING_INTERVAL_MS = 10_000L // Send data every 10 seconds
-    private val MOVEMENT_THRESHOLD = 12.0f // Threshold for movement detection (m/s^2)
-    private val FALL_THRESHOLD = 25.0f // Threshold for fall detection (approx 2.5g)
+    // Service state
+    private var isServiceRunning = false
+    private var isVerifyingFall = false
+
+    // Data analysis buffers
+    // Synchronized list for thread-safe access (Sensor thread vs Coroutine)
+    private val postFallDataBuffer: MutableList<Float> = Collections.synchronizedList(mutableListOf())
+
+    // UI/Notification helpers
+    private var notificationBuilder: NotificationCompat.Builder? = null
+    private val NOTIFICATION_ID = 1001
 
     override fun onBind(intent: Intent?): IBinder? = null
 
@@ -49,84 +59,15 @@ class SensorService : Service(), SensorEventListener {
         if (!isServiceRunning) {
             isServiceRunning = true
             startSensorMonitoring()
-            startDataReporting()
         }
         return START_STICKY
-    }
-
-    private fun startForegroundService() {
-        val channelId = "SafetyMonitorChannel"
-        val channelName = "Safety Monitoring Service"
-
-        val channel = NotificationChannel(
-            channelId,
-            channelName,
-            NotificationManager.IMPORTANCE_LOW
-        )
-        val manager = getSystemService(NotificationManager::class.java)
-        manager.createNotificationChannel(channel)
-
-        val notificationIntent = Intent(this, MainActivity::class.java)
-        val pendingIntent = PendingIntent.getActivity(
-            this, 0, notificationIntent,
-            PendingIntent.FLAG_IMMUTABLE
-        )
-
-        val notification: Notification = NotificationCompat.Builder(this, channelId)
-            .setContentTitle("EverActive Guard")
-            .setContentText("Monitoring your safety active...")
-            .setSmallIcon(R.mipmap.ic_launcher_round) // Ensure this resource exists
-            .setContentIntent(pendingIntent)
-            .setOngoing(true)
-            .build()
-
-        // ID > 0 required
-        startForeground(1001, notification)
     }
 
     private fun startSensorMonitoring() {
         val accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
         accelerometer?.let {
-            sensorManager.registerListener(this, it, SensorManager.SENSOR_DELAY_NORMAL)
-        }
-    }
-
-    private fun startDataReporting() {
-        serviceScope.launch {
-            while (isServiceRunning) {
-                delay(REPORTING_INTERVAL_MS)
-                sendBatchedEvents()
-            }
-        }
-    }
-
-    private suspend fun sendBatchedEvents() {
-        if (stepsCounter > 0) {
-            val events = listOf(
-                EventDto.Move(
-                    timestamp = System.currentTimeMillis(),
-                    steps = stepsCounter
-                )
-            )
-
-            // Reset counter before sending to avoid double counting if call fails briefly
-            // In production, you might want better transaction handling
-            val currentSteps = stepsCounter
-            stepsCounter = 0
-
-            val result = apiClient.pushEvents(events)
-            if (result != null) {
-                // Restore steps if failed (simple retry logic)
-                stepsCounter += currentSteps
-                println("Failed to send events: ${result.message}")
-            } else {
-                println("Events sent successfully. Steps: $currentSteps")
-            }
-        } else {
-            // Send a ping if no movement to show connectivity
-            apiClient.pushEvents(
-                listOf(EventDto.Ping(timestamp = System.currentTimeMillis()))
-            )
+            // SENSOR_DELAY_GAME provides higher frequency for accurate fall detection
+            sensorManager.registerListener(this, it, SensorManager.SENSOR_DELAY_GAME)
         }
     }
 
@@ -138,36 +79,127 @@ class SensorService : Service(), SensorEventListener {
                 val z = it.values[2]
 
                 // Calculate total acceleration vector
-                val acceleration = sqrt(x * x + y * y + z * z)
+                val currentAcceleration = sqrt(x * x + y * y + z * z)
 
-                // Detect simple movement
-                if (abs(acceleration - SensorManager.GRAVITY_EARTH) > 2.0) {
-                    // It's a rough approximation of a "step" or significant activity
-                    stepsCounter++
-                    lastMovementTime = System.currentTimeMillis()
-                }
-
-                // Detect potential fall (High impact)
-                if (acceleration > FALL_THRESHOLD) {
-                    handleFallDetection()
+                if (isVerifyingFall) {
+                    // Verification phase: collect data for analysis
+                    postFallDataBuffer.add(currentAcceleration)
+                } else {
+                    // Monitoring phase: detect impact peak
+                    if (currentAcceleration > FALL_THRESHOLD) {
+                        handlePotentialFallDetected()
+                    }
                 }
             }
         }
     }
 
-    private fun handleFallDetection() {
-        println("POTENTIAL FALL DETECTED!")
+    private fun handlePotentialFallDetected() {
+        isVerifyingFall = true
+        postFallDataBuffer.clear()
+
+        println("Impact detected! verifying inactivity...")
+        updateNotification("Impact detected! Verifying...")
+
         serviceScope.launch {
-            // Immediately send critical data (in real app: trigger alarm logic)
-            apiClient.pushEvents(
-                listOf(EventDto.Ping(timestamp = System.currentTimeMillis())) // Or special Fall event if added to DTO
-            )
+            // Wait for data collection
+            delay(CONFIRMATION_WINDOW_MS)
+
+            // Analyze collected data
+            analyzePostFallData()
+
+            // Reset flags
+            isVerifyingFall = false
+            postFallDataBuffer.clear()
         }
     }
 
-    override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {
-        // No-op
+    private suspend fun analyzePostFallData() {
+        // Copy data to avoid concurrency issues
+        val dataSnapshot = postFallDataBuffer.toList()
+
+        if (dataSnapshot.isEmpty()) return
+
+        // Calculate average (approx. 9.81 m/s^2 if stationary)
+        val average = dataSnapshot.average()
+
+        // Calculate Standard Deviation to check device stability
+        // Low std dev = device is lying still. High std dev = movement/walking.
+        var variance = 0.0
+        for (value in dataSnapshot) {
+            variance += (value - average).pow(2)
+        }
+        variance /= dataSnapshot.size
+        val stdDev = sqrt(variance)
+
+        println("Post-fall analysis: Avg=${average.format(2)}, StdDev=${stdDev.format(2)}")
+
+        // Decision logic:
+        if (stdDev < INACTIVITY_THRESHOLD) {
+            // Low deviation implies inactivity -> Alarm
+            triggerAlarm()
+        } else {
+            // High deviation implies movement -> Cancel
+            println("Alarm cancelled: Movement detected.")
+            updateNotification("Alarm cancelled. Movement detected.")
+            delay(3000)
+            updateNotification("Monitoring active")
+        }
     }
+
+    private suspend fun triggerAlarm() {
+        println("ALARM! MAN-DOWN CONFIRMED")
+        updateNotification("ALARM! SENDING ALERT...")
+
+        // TODO: Use specific "Fall" event type. Using "Ping" as placeholder.
+        val alarmEvent = EventDto.Ping(timestamp = System.currentTimeMillis())
+
+        val result = apiClient.pushEvents(listOf(alarmEvent))
+
+        if (result == null) {
+            updateNotification("Alert sent to HQ!")
+        } else {
+            updateNotification("Error sending alert!")
+        }
+    }
+
+    // --- Notification & System Section ---
+
+    private fun startForegroundService() {
+        val channelId = "SafetyMonitorChannel"
+        val manager = getSystemService(NotificationManager::class.java)
+
+        if (manager.getNotificationChannel(channelId) == null) {
+            val channel = NotificationChannel(
+                channelId,
+                "Safety Monitor",
+                NotificationManager.IMPORTANCE_HIGH // High for visibility
+            )
+            manager.createNotificationChannel(channel)
+        }
+
+        val intent = Intent(this, MainActivity::class.java)
+        val pendingIntent = PendingIntent.getActivity(this, 0, intent, PendingIntent.FLAG_IMMUTABLE)
+
+        notificationBuilder = NotificationCompat.Builder(this, channelId)
+            .setContentTitle("EverActive Guard")
+            .setContentText("Monitoring active")
+            .setSmallIcon(R.mipmap.ic_launcher_round)
+            .setContentIntent(pendingIntent)
+            .setOngoing(true)
+
+        startForeground(NOTIFICATION_ID, notificationBuilder!!.build())
+    }
+
+    private fun updateNotification(text: String) {
+        notificationBuilder?.let {
+            it.setContentText(text)
+            val manager = getSystemService(NotificationManager::class.java)
+            manager.notify(NOTIFICATION_ID, it.build())
+        }
+    }
+
+    override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {}
 
     override fun onDestroy() {
         super.onDestroy()
@@ -175,4 +207,6 @@ class SensorService : Service(), SensorEventListener {
         sensorManager.unregisterListener(this)
         serviceScope.cancel()
     }
+
+    private fun Double.format(digits: Int) = "%.${digits}f".format(this)
 }
