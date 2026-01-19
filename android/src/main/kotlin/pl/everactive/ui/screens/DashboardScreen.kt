@@ -1,8 +1,5 @@
 package pl.everactive
 
-import android.Manifest
-import android.app.Activity
-import android.content.pm.PackageManager
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -37,7 +34,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.core.content.ContextCompat
 import kotlinx.coroutines.delay
 import org.koin.compose.koinInject
 import pl.everactive.clients.EveractiveApiClient
@@ -66,21 +62,18 @@ fun DashboardScreen(
     var alertStatus by remember { mutableStateOf(AlertStatus.NONE) }
     var pendingTimeRemaining by remember { mutableIntStateOf(5) }
 
-    // Permission request launcher
     val permissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
     ) { permissions ->
-        // Check each permission individually to provide better feedback
         val allGranted = permissions.all { (_, isGranted) -> isGranted }
-        
+
         if (allGranted) {
             serviceController.startMonitoringService(apiClient)
         } else {
-            // Find which permissions were denied
             val deniedPermissions = permissions.filter { (_, isGranted) -> !isGranted }.keys
             Toast.makeText(
-                context, 
-                "Missing permissions: ${deniedPermissions.joinToString(", ") { it.substringAfterLast(".") }}", 
+                context,
+                "Missing permissions: ${deniedPermissions.joinToString(", ") { it.substringAfterLast(".") }}",
                 Toast.LENGTH_SHORT
             ).show()
         }
@@ -88,7 +81,6 @@ fun DashboardScreen(
 
     val continuousEasing = remember { CubicBezierEasing(0.5f, 0.2f, 0.5f, 0.8f) }
 
-    // Handle shift active state - request permissions and start service
     LaunchedEffect(isShiftActive) {
         if (isShiftActive) {
             if (PermissionUtils.allPermissionsGranted(context)) {
@@ -122,7 +114,6 @@ fun DashboardScreen(
         }
     }
 
-    // Stop service when leaving the screen
     DisposableEffect(Unit) {
         onDispose {
             if (isShiftActive) {
