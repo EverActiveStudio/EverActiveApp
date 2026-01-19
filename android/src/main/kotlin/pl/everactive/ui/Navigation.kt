@@ -10,7 +10,7 @@ import androidx.compose.ui.platform.LocalContext
 
 @Composable
 fun AppNavigation() {
-    var currentScreen by remember { mutableStateOf("dashboard") }
+    var currentScreen by remember { mutableStateOf("welcome") }
     var loggedInUser by remember { mutableStateOf("") }
     val context = LocalContext.current
 

@@ -1,6 +1,8 @@
 package pl.everactive
 
-import android.content.Intent
+import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.Canvas
@@ -34,10 +36,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
 import org.koin.compose.koinInject
-import pl.everactive.services.AlertManager
-import pl.everactive.services.SensorService
+import pl.everactive.clients.EveractiveApiClient
+import pl.everactive.services.ServiceController
+import pl.everactive.utils.PermissionUtils
 
-// Kept AlertStatus here as requested
 enum class AlertStatus {
     NONE,
     PENDING,
@@ -50,25 +52,44 @@ fun DashboardScreen(
     onLogoutClick: () -> Unit
 ) {
     val context = LocalContext.current
+    val serviceController: ServiceController = koinInject()
+    val apiClient: EveractiveApiClient = koinInject()
 
-    // Inject Manager to handle logic (shared with Service)
-    val alertManager: AlertManager = koinInject()
-
-    // Observe state from Manager instead of local state
-    val alertStatus by alertManager.alertStatus.collectAsState()
-    val pendingTimeRemaining by alertManager.timeRemaining.collectAsState()
-
-    // Local UI variables (Animations, Shift Timer)
     var isShiftActive by remember { mutableStateOf(false) }
     var currentShiftMillis by remember { mutableLongStateOf(0L) }
     val shiftDurationSeconds = currentShiftMillis / 1000
 
-    val continuousEasing = remember { CubicBezierEasing(0.5f, 0.2f, 0.5f, 0.8f) }
-    val primaryColor = MaterialTheme.colorScheme.primary
+    var alertStatus by remember { mutableStateOf(AlertStatus.NONE) }
+    var pendingTimeRemaining by remember { mutableIntStateOf(5) }
 
-    // Shift Timer Logic
+    val permissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) { permissions ->
+        val allGranted = permissions.all { (_, isGranted) -> isGranted }
+
+        if (allGranted) {
+            serviceController.startMonitoringService(apiClient)
+        } else {
+            val deniedPermissions = permissions.filter { (_, isGranted) -> !isGranted }.keys
+            Toast.makeText(
+                context,
+                "Missing permissions: ${deniedPermissions.joinToString(", ") { it.substringAfterLast(".") }}",
+                Toast.LENGTH_SHORT
+            ).show()
+        }
+    }
+
+    val continuousEasing = remember { CubicBezierEasing(0.5f, 0.2f, 0.5f, 0.8f) }
+
     LaunchedEffect(isShiftActive) {
         if (isShiftActive) {
+            if (PermissionUtils.allPermissionsGranted(context)) {
+                serviceController.startMonitoringService(apiClient)
+            } else {
+                // Request permissions
+                permissionLauncher.launch(PermissionUtils.getRequiredPermissions())
+            }
+
             val startTime = System.currentTimeMillis()
             while (isShiftActive) {
                 currentShiftMillis = System.currentTimeMillis() - startTime
@@ -76,8 +97,32 @@ fun DashboardScreen(
             }
         } else {
             currentShiftMillis = 0L
+            serviceController.stopMonitoringService()
         }
     }
+
+    LaunchedEffect(alertStatus) {
+        if (alertStatus == AlertStatus.PENDING) {
+            pendingTimeRemaining = 5
+            while (pendingTimeRemaining > 0 && alertStatus == AlertStatus.PENDING) {
+                delay(1000)
+                pendingTimeRemaining--
+            }
+            if (alertStatus == AlertStatus.PENDING) {
+                alertStatus = AlertStatus.SENT
+            }
+        }
+    }
+
+    DisposableEffect(Unit) {
+        onDispose {
+            if (isShiftActive) {
+                serviceController.stopMonitoringService()
+            }
+        }
+    }
+
+    val primaryColor = MaterialTheme.colorScheme.primary
 
     Surface(
         modifier = Modifier.fillMaxSize(),
@@ -101,7 +146,7 @@ fun DashboardScreen(
                         color = MaterialTheme.colorScheme.onBackground
                     )
                     Text(
-                        text = if (isShiftActive) "MONITORING ACTIVE" else "Status: Idle",
+                        text = if (isShiftActive) "MONITORING ACTIVE (Background Service)" else "Status: Idle",
                         style = MaterialTheme.typography.labelMedium,
                         color = if (isShiftActive) primaryColor else MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -127,7 +172,7 @@ fun DashboardScreen(
                         title = "SENDING ALARM...",
                         buttonText = "CANCEL",
                         containerColor = Color(0xFFEF6C00),
-                        onButtonClick = { alertManager.cancelSOS() }
+                        onButtonClick = { alertStatus = AlertStatus.NONE }
                     ) {
                         Box(contentAlignment = Alignment.Center) {
                             CircularProgressIndicator(
@@ -150,7 +195,7 @@ fun DashboardScreen(
                         title = "ALARM SENT!",
                         buttonText = "CLOSE",
                         containerColor = Color(0xFFC62828),
-                        onButtonClick = { alertManager.closeAlert() }
+                        onButtonClick = { alertStatus = AlertStatus.NONE }
                     ) {
                         Text(
                             text = "Supervisor notified.",
@@ -232,14 +277,6 @@ fun DashboardScreen(
                             indication = null
                         ) {
                             isShiftActive = !isShiftActive
-
-                            // Start/Stop Service
-                            val intent = Intent(context, SensorService::class.java)
-                            if (isShiftActive) {
-                                context.startForegroundService(intent)
-                            } else {
-                                context.stopService(intent)
-                            }
                         }
                 ) {
                     Column(
@@ -292,7 +329,9 @@ fun DashboardScreen(
 
             Button(
                 onClick = {
-                    alertManager.triggerSOS()
+                    if (alertStatus == AlertStatus.NONE) {
+                        alertStatus = AlertStatus.PENDING
+                    }
                 },
                 modifier = Modifier
                     .fillMaxWidth()

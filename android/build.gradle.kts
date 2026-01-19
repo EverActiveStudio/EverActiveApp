@@ -67,9 +67,14 @@ dependencies {
     implementation(libs.androidx.lifecycle.runtimeCompose)
     implementation(libs.androidx.datastore.preferences)
 
+    // Background service and location
+    implementation(libs.androidx.work.runtime.ktx)
+    implementation(libs.play.services.location)
+    implementation(libs.androidx.activity)
+    implementation(libs.androidx.core)
+
     implementation(libs.bundles.ktor.client)
     implementation(libs.bundles.koin.android)
-
 
     testImplementation(libs.kotlin.test)
 
