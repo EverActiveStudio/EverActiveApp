@@ -1,5 +1,11 @@
 package pl.everactive
 
+import android.Manifest
+import android.app.Activity
+import android.content.pm.PackageManager
+import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.Canvas
@@ -26,11 +32,17 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.withTransform
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat
 import kotlinx.coroutines.delay
+import org.koin.compose.koinInject
+import pl.everactive.clients.EveractiveApiClient
+import pl.everactive.services.ServiceController
+import pl.everactive.utils.PermissionUtils
 
 enum class AlertStatus {
     NONE,
@@ -43,6 +55,10 @@ fun DashboardScreen(
     username: String,
     onLogoutClick: () -> Unit
 ) {
+    val context = LocalContext.current
+    val serviceController: ServiceController = koinInject()
+    val apiClient: EveractiveApiClient = koinInject()
+
     var isShiftActive by remember { mutableStateOf(false) }
     var currentShiftMillis by remember { mutableLongStateOf(0L) }
     val shiftDurationSeconds = currentShiftMillis / 1000
@@ -50,10 +66,30 @@ fun DashboardScreen(
     var alertStatus by remember { mutableStateOf(AlertStatus.NONE) }
     var pendingTimeRemaining by remember { mutableIntStateOf(5) }
 
+    // Permission request launcher
+    val permissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) { permissions ->
+        val allGranted = permissions.values.all { it }
+        if (allGranted) {
+            serviceController.startMonitoringService(apiClient)
+        } else {
+            Toast.makeText(context, "Permissions required for safety monitoring", Toast.LENGTH_SHORT).show()
+        }
+    }
+
     val continuousEasing = remember { CubicBezierEasing(0.5f, 0.2f, 0.5f, 0.8f) }
 
+    // Handle shift active state - request permissions and start service
     LaunchedEffect(isShiftActive) {
         if (isShiftActive) {
+            if (PermissionUtils.allPermissionsGranted(context)) {
+                serviceController.startMonitoringService(apiClient)
+            } else {
+                // Request permissions
+                permissionLauncher.launch(PermissionUtils.getRequiredPermissions())
+            }
+
             val startTime = System.currentTimeMillis()
             while (isShiftActive) {
                 currentShiftMillis = System.currentTimeMillis() - startTime
@@ -61,6 +97,7 @@ fun DashboardScreen(
             }
         } else {
             currentShiftMillis = 0L
+            serviceController.stopMonitoringService()
         }
     }
 
@@ -73,6 +110,15 @@ fun DashboardScreen(
             }
             if (alertStatus == AlertStatus.PENDING) {
                 alertStatus = AlertStatus.SENT
+            }
+        }
+    }
+
+    // Stop service when leaving the screen
+    DisposableEffect(Unit) {
+        onDispose {
+            if (isShiftActive) {
+                serviceController.stopMonitoringService()
             }
         }
     }
@@ -101,7 +147,7 @@ fun DashboardScreen(
                         color = MaterialTheme.colorScheme.onBackground
                     )
                     Text(
-                        text = if (isShiftActive) "MONITORING ACTIVE" else "Status: Idle",
+                        text = if (isShiftActive) "MONITORING ACTIVE (Background Service)" else "Status: Idle",
                         style = MaterialTheme.typography.labelMedium,
                         color = if (isShiftActive) primaryColor else MaterialTheme.colorScheme.onSurfaceVariant
                     )
