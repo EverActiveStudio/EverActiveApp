@@ -18,4 +18,7 @@ class GroupEntity(
 
     @OneToMany(mappedBy = "group_id")
     val rules: MutableList<RuleEntity> = mutableListOf(),
+
+    @OneToMany(mappedBy = "group_id")
+    val timeFrames: MutableList<TimeFrameEntity> = mutableListOf(),
 )
