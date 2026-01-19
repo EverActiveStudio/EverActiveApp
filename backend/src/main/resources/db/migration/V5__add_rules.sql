@@ -1,0 +1,12 @@
+CREATE SEQUENCE IF NOT EXISTS rules_id_seq START WITH 1 INCREMENT BY 50;
+
+CREATE TABLE rules
+(
+    id       BIGINT NOT NULL,
+    group_id BIGINT NOT NULL,
+    rule     JSON   NOT NULL,
+    CONSTRAINT pk_rules PRIMARY KEY (id)
+);
+
+ALTER TABLE rules
+    ADD CONSTRAINT FK_RULES_ON_GROUP FOREIGN KEY (group_id) REFERENCES groups (id);
