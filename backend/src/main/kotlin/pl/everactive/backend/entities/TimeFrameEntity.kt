@@ -9,7 +9,7 @@ import jakarta.persistence.*
 class TimeFrameEntity(
     @Id
     @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "time_frames_id_seq")
-    val id: Long,
+    val id: Long? = null,
 
     @ManyToOne(optional = false)
     val group: GroupEntity,

@@ -8,7 +8,7 @@ import jakarta.persistence.*
 class GroupEntity(
     @Id
     @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "groups_id_seq")
-    val id: Long,
+    val id: Long? = null,
 
     @Column(nullable = false, length = 255)
     var name: String,

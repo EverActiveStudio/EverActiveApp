@@ -10,7 +10,7 @@ import pl.everactive.backend.domain.Rule
 class RuleEntity(
     @Id
     @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "rules_id_seq")
-    val id: Long,
+    val id: Long? = null,
 
     @ManyToOne(optional = false)
     val group: GroupEntity,
