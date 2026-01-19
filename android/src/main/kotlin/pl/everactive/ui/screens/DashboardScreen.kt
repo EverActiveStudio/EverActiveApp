@@ -70,11 +70,19 @@ fun DashboardScreen(
     val permissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
     ) { permissions ->
-        val allGranted = permissions.values.all { it }
+        // Check each permission individually to provide better feedback
+        val allGranted = permissions.all { (_, isGranted) -> isGranted }
+        
         if (allGranted) {
             serviceController.startMonitoringService(apiClient)
         } else {
-            Toast.makeText(context, "Permissions required for safety monitoring", Toast.LENGTH_SHORT).show()
+            // Find which permissions were denied
+            val deniedPermissions = permissions.filter { (_, isGranted) -> !isGranted }.keys
+            Toast.makeText(
+                context, 
+                "Missing permissions: ${deniedPermissions.joinToString(", ") { it.substringAfterLast(".") }}", 
+                Toast.LENGTH_SHORT
+            ).show()
         }
     }
 
