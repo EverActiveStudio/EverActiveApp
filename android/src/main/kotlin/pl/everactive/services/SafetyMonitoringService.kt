@@ -1,5 +1,6 @@
 package pl.everactive.services
 
+import android.Manifest
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -19,6 +20,8 @@ import android.os.Build
 import android.os.Binder
 import android.os.IBinder
 import android.os.Looper
+import android.os.PowerManager
+import androidx.annotation.RequiresPermission
 import androidx.core.app.NotificationCompat
 import androidx.core.app.ServiceCompat
 import kotlinx.coroutines.*
@@ -28,6 +31,7 @@ import pl.everactive.MainActivity
 import pl.everactive.R
 import pl.everactive.clients.EveractiveApiClient
 import pl.everactive.shared.EventDto
+import kotlin.math.abs
 import kotlin.math.pow
 import kotlin.math.sqrt
 
@@ -62,21 +66,41 @@ class SafetyMonitoringService : Service(), SensorEventListener, LocationListener
     private val scope = CoroutineScope(Dispatchers.Main.immediate + SupervisorJob())
     private lateinit var apiClient: EveractiveApiClient
 
+    // Man-Down / Fall Detection Dependencies & State
+    private lateinit var alertManager: AlertManager
+    private lateinit var powerManager: PowerManager
+    private var wakeLock: PowerManager.WakeLock? = null
+    private var analysisJob: Job? = null
+
+    // Fall Detection Constants
+    private val FALL_THRESHOLD = 25.0f // G-force impact
+    private val IMMOBILITY_THRESHOLD = 2.0f // Movement threshold
+    private val FALL_ANALYSIS_WINDOW_MS = 10_000L // 10s wait
+
+    private var potentialFallDetected = false
+    private val recentAccelerationData = ArrayDeque<Float>(50)
+
     inner class ServiceBinder : Binder() {
         fun getService(): SafetyMonitoringService = this@SafetyMonitoringService
     }
 
     override fun onCreate() {
         super.onCreate()
-        
+
         sensorManager = getSystemService(Context.SENSOR_SERVICE) as SensorManager
         locationManager = getSystemService(Context.LOCATION_SERVICE) as LocationManager
         apiClient = get()  // Get from Koin
+
+        // Initialize Man-Down Utils
+        alertManager = get()  // Assuming AlertManager handles context internally
+        powerManager = getSystemService(Context.POWER_SERVICE) as PowerManager
+        wakeLock = powerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "Eve:FallAnalysisLock")
 
         initializeSensors()
         createNotificationChannel()
     }
 
+    @RequiresPermission(allOf = [Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION])
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
             ACTION_START_MONITORING -> {
@@ -103,6 +127,7 @@ class SafetyMonitoringService : Service(), SensorEventListener, LocationListener
         accelerometerSensor = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
     }
 
+    @RequiresPermission(anyOf = [Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION])
     private fun startMonitoring() {
         if (isMonitoring) return
 
@@ -181,6 +206,10 @@ class SafetyMonitoringService : Service(), SensorEventListener, LocationListener
         } catch (e: SecurityException) {
             // Handle permission denial
         }
+
+        //  Cleanup Man-Down ---
+        analysisJob?.cancel()
+        releaseWakeLock()
 
         // Cancel pending syncs
         scope.coroutineContext.cancelChildren()
@@ -265,6 +294,18 @@ class SafetyMonitoringService : Service(), SensorEventListener, LocationListener
                             accelerationValues[2].pow(2)
                 )
 
+                if (acceleration > FALL_THRESHOLD && !potentialFallDetected) {
+                    handlePotentialFall()
+                }
+
+                // 2. Buffer data for immobility analysis if fall suspected
+                if (potentialFallDetected) {
+                    synchronized(recentAccelerationData) {
+                        if (recentAccelerationData.size >= 50) recentAccelerationData.removeFirst()
+                        recentAccelerationData.addLast(acceleration)
+                    }
+                }
+
                 // Trigger ping periodically to show activity
                 if (acceleration > 15) {
                     // User is moving, periodic ping
@@ -273,6 +314,57 @@ class SafetyMonitoringService : Service(), SensorEventListener, LocationListener
                     }
                 }
             }
+        }
+    }
+
+    // --- ADDED: Man-Down Private Methods ---
+    private fun handlePotentialFall() {
+        potentialFallDetected = true
+        acquireWakeLock() // Keep CPU running
+
+        analysisJob?.cancel()
+        analysisJob = scope.launch(Dispatchers.Default) {
+            // Wait to see if user moves
+            delay(FALL_ANALYSIS_WINDOW_MS)
+
+            if (isUserStill()) {
+                triggerManDownAlert()
+            }
+
+            // Reset state
+            potentialFallDetected = false
+            releaseWakeLock()
+        }
+    }
+
+    private fun isUserStill(): Boolean {
+        synchronized(recentAccelerationData) {
+            if (recentAccelerationData.isEmpty()) return true
+            val gravity = 9.81f
+            val maxDev = recentAccelerationData.maxOfOrNull { abs(it - gravity) as Float } ?: 0f
+            return maxDev < IMMOBILITY_THRESHOLD
+        }
+    }
+
+    private fun triggerManDownAlert() {
+        // 1. Local Alert
+        alertManager.triggerSOS()
+
+        // 2. Server Event
+        // Note: Assuming EventDto.Fall or similar exists. If not, map to existing Critical Event or Ping with data.
+        // TODO: Ensure EventDto.Fall exists in shared module
+        // recordEvent(EventDto.Fall(timestamp = System.currentTimeMillis(), latitude = lastLocation?.latitude, longitude = lastLocation?.longitude))
+    }
+
+    private fun acquireWakeLock() {
+        wakeLock?.takeIf { !it.isHeld }?.acquire(FALL_ANALYSIS_WINDOW_MS + 2000)
+    }
+
+    private fun releaseWakeLock() {
+        try {
+            if (wakeLock?.isHeld == true) wakeLock?.release()
+        } catch (e: Exception) {
+            // Ignore release errors
         }
     }
 
