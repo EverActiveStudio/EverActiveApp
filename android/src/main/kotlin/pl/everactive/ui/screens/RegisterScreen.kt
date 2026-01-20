@@ -24,13 +24,13 @@ fun RegisterScreen(
     var password by remember { mutableStateOf("") }
     var confirmPassword by remember { mutableStateOf("") }
 
-    // Dropdown state
-    var selectedSupervisor by remember { mutableStateOf("") }
-    var isSupervisorExpanded by remember { mutableStateOf(false) }
-    val supervisors = listOf("Shift Manager A", "Shift Manager B", "Safety Officer", "Central Monitoring")
-
     var passwordVisible by remember { mutableStateOf(false) }
     var confirmPasswordVisible by remember { mutableStateOf(false) }
+
+    // Role dropdown
+    var selectedRole by remember { mutableStateOf("") }
+    var isRoleExpanded by remember { mutableStateOf(false) }
+    val roles = listOf("Employee", "Supervisor")
 
     var errorMessage by remember { mutableStateOf<String?>(null) }
 
@@ -76,19 +76,19 @@ fun RegisterScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Supervisor Dropdown
+            // Role Dropdown
             ExposedDropdownMenuBox(
-                expanded = isSupervisorExpanded,
-                onExpandedChange = { isSupervisorExpanded = !isSupervisorExpanded },
+                expanded = isRoleExpanded,
+                onExpandedChange = { isRoleExpanded = !isRoleExpanded },
                 modifier = Modifier.fillMaxWidth()
             ) {
                 OutlinedTextField(
-                    value = selectedSupervisor,
+                    value = selectedRole,
                     onValueChange = {},
                     readOnly = true,
-                    label = { Text("Select Supervisor (for alerts)") },
-                    leadingIcon = { Icon(Icons.Default.SupervisorAccount, contentDescription = null) },
-                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = isSupervisorExpanded) },
+                    label = { Text("Select Role") },
+                    leadingIcon = { Icon(Icons.Default.Badge, contentDescription = null) },
+                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = isRoleExpanded) },
                     modifier = Modifier
                         .fillMaxWidth()
                         .menuAnchor(),
@@ -96,15 +96,15 @@ fun RegisterScreen(
                 )
 
                 ExposedDropdownMenu(
-                    expanded = isSupervisorExpanded,
-                    onDismissRequest = { isSupervisorExpanded = false }
+                    expanded = isRoleExpanded,
+                    onDismissRequest = { isRoleExpanded = false }
                 ) {
-                    supervisors.forEach { item ->
+                    roles.forEach { item ->
                         DropdownMenuItem(
                             text = { Text(text = item) },
                             onClick = {
-                                selectedSupervisor = item
-                                isSupervisorExpanded = false
+                                selectedRole = item
+                                isRoleExpanded = false
                             }
                         )
                     }
@@ -169,7 +169,7 @@ fun RegisterScreen(
             Button(
                 onClick = {
                     if (password == confirmPassword) {
-                        onRegisterSuccess(username, selectedSupervisor)
+                        onRegisterSuccess(username, selectedRole)
                     } else {
                         errorMessage = "Passwords do not match"
                     }
@@ -180,7 +180,7 @@ fun RegisterScreen(
                 enabled = username.isNotBlank() &&
                     password.isNotBlank() &&
                     confirmPassword.isNotBlank() &&
-                    selectedSupervisor.isNotBlank()
+                    selectedRole.isNotBlank()
             ) {
                 Text("REGISTER")
             }
