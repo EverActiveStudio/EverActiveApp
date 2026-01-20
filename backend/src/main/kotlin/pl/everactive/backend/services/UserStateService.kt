@@ -3,15 +3,18 @@ package pl.everactive.backend.services
 import org.springframework.stereotype.Service
 import pl.everactive.backend.domain.EventData
 import pl.everactive.backend.entities.EventEntity
+import pl.everactive.backend.entities.UserEntity
 import java.time.LocalDateTime
 import java.util.concurrent.ConcurrentHashMap
 
+// TODO: event replay on startup
+
 @Service
-class EventProcessor {
+class UserStateService {
     private val states = ConcurrentHashMap<Long, MutableState>()
 
 
-    suspend fun process(event: EventEntity) {
+    suspend fun update(event: EventEntity) {
         val state = states.computeIfAbsent(checkNotNull(event.user.id)) { MutableState() }
 
         state.lastEventTime = event.timestamp
@@ -29,9 +32,9 @@ class EventProcessor {
         }
     }
 
-    fun getState(userId: Long): State? = states[userId]
-
-    fun getStates(): Map<Long, State> = states
+    fun getStateSnapshot(user: UserEntity): State = states.computeIfAbsent(checkNotNull(user.id)) {
+        MutableState()
+    }
 
     interface State {
         val lastLocation: EventData.Location?

@@ -1,0 +1,14 @@
+CREATE SEQUENCE IF NOT EXISTS groups_id_seq START WITH 1 INCREMENT BY 50;
+
+CREATE TABLE groups
+(
+    id   BIGINT       NOT NULL,
+    name VARCHAR(255) NOT NULL,
+    CONSTRAINT pk_groups PRIMARY KEY (id)
+);
+
+ALTER TABLE users
+    ADD group_id BIGINT;
+
+ALTER TABLE users
+    ADD CONSTRAINT FK_USERS_ON_GROUP FOREIGN KEY (group_id) REFERENCES groups (id);

@@ -18,7 +18,7 @@ import pl.everactive.shared.PushEventsRequest
 class EventService(
     private val requestService: RequestService,
     private val eventRepository: EventRepository,
-    private val eventProcessor: EventProcessor,
+    private val userStateService: UserStateService,
 ) {
     private val logger = getLogger()
     private val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
@@ -54,7 +54,7 @@ class EventService(
         scope.launch {
             channel.consumeAsFlow().collect { event ->
                 try {
-                    eventProcessor.process(event)
+                    userStateService.update(event)
                 } catch (e: Exception) {
                     logger.error("Error processing event ${event.id}", e)
                 }
