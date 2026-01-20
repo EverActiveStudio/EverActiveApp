@@ -23,4 +23,17 @@ class TimeFrameEntity(
     val weekDayEnd: Int,
     @Column(nullable = false)
     val hourEnd: Int,
-)
+) {
+    fun contains(weekDay: Int, hour: Int): Boolean {
+        val startTotal = weekDayStart * 24 + hourStart
+        val endTotal = weekDayEnd * 24 + hourEnd
+
+        val checkTotal = weekDay * 24 + hour
+
+        return if (startTotal <= endTotal) {
+            checkTotal in startTotal..endTotal
+        } else {
+            checkTotal !in (endTotal + 1)..<startTotal
+        }
+    }
+}
