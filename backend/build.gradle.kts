@@ -57,6 +57,12 @@ java {
     }
 }
 
-tasks.withType<Test> {
-    useJUnitPlatform()
+tasks {
+    withType<Test> {
+        useJUnitPlatform()
+    }
+
+    named<Jar>("jar") {
+        enabled = false
+    }
 }
