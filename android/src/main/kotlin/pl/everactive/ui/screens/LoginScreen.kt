@@ -16,6 +16,11 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import android.widget.Toast
+import androidx.compose.ui.platform.LocalContext
+import kotlinx.coroutines.launch
+import org.koin.compose.koinInject
+import pl.everactive.clients.EveractiveApiClient
 
 @Composable
 fun LoginScreen(
@@ -23,9 +28,10 @@ fun LoginScreen(
     onBackClick: () -> Unit,
     onRegisterClick: () -> Unit
 ) {
-    var username by remember { mutableStateOf("") }
+    var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
+    var isLoading by remember { mutableStateOf(false) }
 
     // Custom colors for inputs: Grey when inactive, Green when focused
     val inputColors = OutlinedTextFieldDefaults.colors(
@@ -36,6 +42,14 @@ fun LoginScreen(
         unfocusedLabelColor = MaterialTheme.colorScheme.outline,
         focusedLabelColor = MaterialTheme.colorScheme.primary
     )
+
+    val apiClient: EveractiveApiClient = koinInject()
+    val scope = rememberCoroutineScope()
+    val context = LocalContext.current
+
+    val isEmailValid = remember(email) {
+        email.isNotBlank() && android.util.Patterns.EMAIL_ADDRESS.matcher(email).matches()
+    }
 
     Surface(
         modifier = Modifier.fillMaxSize(),
@@ -56,15 +70,17 @@ fun LoginScreen(
 
             Spacer(modifier = Modifier.height(32.dp))
 
-            // Username
+            // Email
             OutlinedTextField(
-                value = username,
-                onValueChange = { username = it },
-                label = { Text("Username") },
+                value = email,
+                onValueChange = { email = it },
+                label = { Text("Email") },
+                enabled = !isLoading,
                 leadingIcon = { Icon(Icons.Default.Person, contentDescription = null) },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
-                colors = inputColors
+                colors = inputColors,
+                isError = email.isNotEmpty() && !isEmailValid,
             )
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -92,19 +108,47 @@ fun LoginScreen(
 
             // Login Button
             Button(
-                onClick = { onLoginSuccess(username) },
+                onClick = {
+                    if (isEmailValid && password.isNotBlank()) {
+                        isLoading = true
+                        scope.launch {
+                            try {
+                                apiClient.login(email = email, rawPassword = password)
+                                onLoginSuccess(email)
+                            } catch (e: Exception) {
+                                Toast.makeText(
+                                    context,
+                                    "Login failed: ${e.message ?: "Unknown error"}",
+                                    Toast.LENGTH_LONG
+                                ).show()
+                            } finally {
+                                isLoading = false
+                            }
+                        }
+                    }
+                },
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(50.dp),
-                enabled = username.isNotBlank() && password.isNotBlank()
+                enabled = !isLoading && isEmailValid && password.isNotBlank()
             ) {
-                Text("LOG IN")
+                if (isLoading) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(24.dp),
+                        color = MaterialTheme.colorScheme.onPrimary
+                    )
+                } else {
+                    Text("LOG IN")
+                }
             }
 
             Spacer(modifier = Modifier.height(16.dp))
 
             // Register Link
-            TextButton(onClick = onRegisterClick) {
+            TextButton(
+                onClick = onRegisterClick,
+                enabled = !isLoading
+            ) {
                 Text("Don't have an account? Register")
             }
 
