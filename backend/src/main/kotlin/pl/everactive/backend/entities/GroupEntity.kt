@@ -13,12 +13,12 @@ class GroupEntity(
     @Column(nullable = false, length = 255)
     var name: String,
 
-    @OneToMany(mappedBy = "group_id")
+    @OneToMany(mappedBy = "group")
     val users: MutableList<UserEntity> = mutableListOf(),
 
-    @OneToMany(mappedBy = "group_id")
+    @OneToMany(mappedBy = "group")
     val rules: MutableList<RuleEntity> = mutableListOf(),
 
-    @OneToMany(mappedBy = "group_id")
+    @OneToMany(mappedBy = "group")
     val timeFrames: MutableList<TimeFrameEntity> = mutableListOf(),
 )
