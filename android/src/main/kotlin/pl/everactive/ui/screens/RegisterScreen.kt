@@ -1,5 +1,6 @@
 package pl.everactive
 
+import android.util.Patterns
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
@@ -13,26 +14,30 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import android.widget.Toast
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.capitalize
+import kotlinx.coroutines.launch
+import org.koin.compose.koinInject
+import pl.everactive.clients.EveractiveApiClient
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RegisterScreen(
-    onRegisterSuccess: (String, String) -> Unit,
+    onRegisterSuccess: (String) -> Unit,
     onBackToLoginClick: () -> Unit
 ) {
-    var username by remember { mutableStateOf("") }
+    var firstName by remember { mutableStateOf("") }
+    var lastName by remember { mutableStateOf("") }
+    var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var confirmPassword by remember { mutableStateOf("") }
 
     var passwordVisible by remember { mutableStateOf(false) }
     var confirmPasswordVisible by remember { mutableStateOf(false) }
 
-    // Role dropdown
-    var selectedRole by remember { mutableStateOf("") }
-    var isRoleExpanded by remember { mutableStateOf(false) }
-    val roles = listOf("Employee", "Supervisor")
-
     var errorMessage by remember { mutableStateOf<String?>(null) }
+    var isLoading by remember { mutableStateOf(false) }
 
     // Custom colors (same as Login)
     val inputColors = OutlinedTextFieldDefaults.colors(
@@ -43,6 +48,13 @@ fun RegisterScreen(
         unfocusedLabelColor = MaterialTheme.colorScheme.outline,
         focusedLabelColor = MaterialTheme.colorScheme.primary
     )
+
+    val apiClient: EveractiveApiClient = koinInject()
+    val scope = rememberCoroutineScope()
+    val context = LocalContext.current
+    val isEmailValid = remember(email) {
+        email.isBlank() || Patterns.EMAIL_ADDRESS.matcher(email).matches()
+    }
 
     Surface(
         modifier = Modifier.fillMaxSize(),
@@ -63,53 +75,43 @@ fun RegisterScreen(
 
             Spacer(modifier = Modifier.height(32.dp))
 
-            // Username
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                OutlinedTextField(
+                    value = firstName,
+                    onValueChange = { firstName = it },
+                    label = { Text("First Name") },
+                    singleLine = true,
+                    modifier = Modifier.weight(1f),
+                    colors = inputColors,
+                    enabled = !isLoading,
+                )
+
+                OutlinedTextField(
+                    value = lastName,
+                    onValueChange = { lastName = it },
+                    label = { Text("Last Name") },
+                    singleLine = true,
+                    modifier = Modifier.weight(1f),
+                    colors = inputColors,
+                    enabled = !isLoading,
+                )
+            }
+
+            // Email
             OutlinedTextField(
-                value = username,
-                onValueChange = { username = it },
-                label = { Text("Username") },
+                value = email,
+                onValueChange = { email = it },
+                label = { Text("Email") },
                 leadingIcon = { Icon(Icons.Default.Person, contentDescription = null) },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
-                colors = inputColors
+                colors = inputColors,
+                enabled = !isLoading,
+                isError = email.isNotEmpty() && !isEmailValid
             )
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Role Dropdown
-            ExposedDropdownMenuBox(
-                expanded = isRoleExpanded,
-                onExpandedChange = { isRoleExpanded = !isRoleExpanded },
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                OutlinedTextField(
-                    value = selectedRole,
-                    onValueChange = {},
-                    readOnly = true,
-                    label = { Text("Select Role") },
-                    leadingIcon = { Icon(Icons.Default.Badge, contentDescription = null) },
-                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = isRoleExpanded) },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .menuAnchor(),
-                    colors = inputColors
-                )
-
-                ExposedDropdownMenu(
-                    expanded = isRoleExpanded,
-                    onDismissRequest = { isRoleExpanded = false }
-                ) {
-                    roles.forEach { item ->
-                        DropdownMenuItem(
-                            text = { Text(text = item) },
-                            onClick = {
-                                selectedRole = item
-                                isRoleExpanded = false
-                            }
-                        )
-                    }
-                }
-            }
 
             Spacer(modifier = Modifier.height(16.dp))
 
@@ -129,7 +131,8 @@ fun RegisterScreen(
                 visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
                 modifier = Modifier.fillMaxWidth(),
-                colors = inputColors
+                colors = inputColors,
+                enabled = !isLoading,
             )
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -151,7 +154,7 @@ fun RegisterScreen(
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
                 modifier = Modifier.fillMaxWidth(),
                 colors = inputColors,
-                isError = errorMessage != null
+                enabled = !isLoading,
             )
 
             if (errorMessage != null) {
@@ -168,21 +171,48 @@ fun RegisterScreen(
             // Register Button
             Button(
                 onClick = {
-                    if (password == confirmPassword) {
-                        onRegisterSuccess(username, selectedRole)
-                    } else {
-                        errorMessage = "Passwords do not match"
+                    isLoading = true
+                    val fullName = "${firstName.trim().replaceFirstChar {  it.uppercase() }} ${lastName.trim().replaceFirstChar {  it.uppercase() }}"
+
+                    scope.launch {
+                        try {
+                            val error = apiClient.register(
+                                name = fullName,
+                                email = email,
+                                rawPassword = password
+                            )
+
+                            if (error == null) {
+                                onRegisterSuccess(email)
+                            } else {
+                                errorMessage = "Registration failed: ${error.message}"
+                                Toast.makeText(context, errorMessage, Toast.LENGTH_LONG).show()
+                            }
+                        } catch (e: Exception) {
+                            errorMessage = "Error: ${e.message}"
+                            Toast.makeText(context, errorMessage, Toast.LENGTH_LONG).show()
+                        } finally {
+                            isLoading = false
+                        }
                     }
                 },
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(50.dp),
-                enabled = username.isNotBlank() &&
+                enabled = isEmailValid &&
                     password.isNotBlank() &&
                     confirmPassword.isNotBlank() &&
-                    selectedRole.isNotBlank()
+                    firstName.isNotBlank() &&
+                    lastName.isNotBlank()
             ) {
-                Text("REGISTER")
+                if (isLoading) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(24.dp),
+                        color = MaterialTheme.colorScheme.onPrimary
+                    )
+                } else {
+                    Text("REGISTER")
+                }
             }
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -199,6 +229,6 @@ fun RegisterScreen(
 @Composable
 fun RegisterScreenPreview() {
     EverActiveTheme {
-        RegisterScreen(onRegisterSuccess = { _, _ -> }, onBackToLoginClick = {})
+        RegisterScreen(onRegisterSuccess = { _ -> }, onBackToLoginClick = {})
     }
 }
