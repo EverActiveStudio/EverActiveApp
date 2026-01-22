@@ -1,3 +1,4 @@
+// Plik: eve/kotlin/pl/everactive/services/AlertManager.kt
 package pl.everactive.services
 
 import kotlinx.coroutines.*
@@ -13,11 +14,11 @@ class AlertManager(
 ) {
     private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
 
-    // We observe the AlertStatus defined in DashboardScreen (pl.everactive package)
     private val _alertStatus = MutableStateFlow(AlertStatus.NONE)
     val alertStatus: StateFlow<AlertStatus> = _alertStatus.asStateFlow()
 
-    private val _timeRemaining = MutableStateFlow(5)
+    // ZMIANA: Startowa wartość 10
+    private val _timeRemaining = MutableStateFlow(10)
     val timeRemaining: StateFlow<Int> = _timeRemaining.asStateFlow()
 
     private var countdownJob: Job? = null
@@ -26,7 +27,8 @@ class AlertManager(
         if (_alertStatus.value != AlertStatus.NONE) return
 
         _alertStatus.value = AlertStatus.PENDING
-        _timeRemaining.value = 5
+        // ZMIANA: Reset licznika do 10 przy uruchomieniu
+        _timeRemaining.value = 10
 
         startCountdown()
     }
@@ -34,7 +36,8 @@ class AlertManager(
     fun cancelSOS() {
         countdownJob?.cancel()
         _alertStatus.value = AlertStatus.NONE
-        _timeRemaining.value = 5
+        // ZMIANA: Reset do 10 przy anulowaniu
+        _timeRemaining.value = 10
     }
 
     fun closeAlert() {
@@ -44,19 +47,30 @@ class AlertManager(
     private fun startCountdown() {
         countdownJob?.cancel()
         countdownJob = scope.launch {
-            while (_timeRemaining.value > 0) {
-                delay(1000)
-                _timeRemaining.value -= 1
+            try {
+                while (_timeRemaining.value > 0) {
+                    delay(1000)
+                    _timeRemaining.value -= 1
+                }
+                sendAlertToApi()
+            } catch (e: Exception) {
+                e.printStackTrace()
+                // W razie błędu odliczania, wymuszamy przejście dalej
+                _alertStatus.value = AlertStatus.SENT
             }
-            sendAlertToApi()
         }
     }
 
     private suspend fun sendAlertToApi() {
-        val result = apiClient.pushEvents(
-            listOf(EventDto.Ping(timestamp = System.currentTimeMillis()))
-        )
-        // Update state to SENT to notify UI
-        _alertStatus.value = AlertStatus.SENT
+        try {
+            apiClient.pushEvents(
+                listOf(EventDto.Ping(timestamp = System.currentTimeMillis()))
+            )
+            _alertStatus.value = AlertStatus.SENT
+        } catch (e: Exception) {
+            e.printStackTrace()
+            // Nawet przy błędzie sieci pokazujemy czerwony ekran
+            _alertStatus.value = AlertStatus.SENT
+        }
     }
 }

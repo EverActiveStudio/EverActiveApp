@@ -26,13 +26,11 @@ fun AppNavigation() {
     val scope = rememberCoroutineScope()
 
     var currentScreen by remember { mutableStateOf<String?>(null) }
-    var loggedInUser by remember { mutableStateOf("") }
     val context = LocalContext.current
 
     LaunchedEffect(Unit) {
         val token = apiToken.get()
         if (!token.isNullOrBlank()) {
-            loggedInUser = "user"
             currentScreen = "dashboard"
         } else {
             currentScreen = "welcome"
@@ -60,7 +58,6 @@ fun AppNavigation() {
         "login" -> {
             LoginScreen(
                 onLoginSuccess = { email ->
-                    loggedInUser = email
                     Toast.makeText(context, "Logged in as $email", Toast.LENGTH_SHORT).show()
                     currentScreen = "dashboard"
                 },
@@ -81,7 +78,6 @@ fun AppNavigation() {
                         Toast.LENGTH_LONG
                     ).show()
 
-                    loggedInUser = email
                     currentScreen = "dashboard"
                 },
                 onBackToLoginClick = {
@@ -92,13 +88,11 @@ fun AppNavigation() {
 
         "dashboard" -> {
             DashboardScreen(
-                username = loggedInUser,
                 onLogoutClick = {
                     // Start a coroutine to handle suspend functions and service calls
                     scope.launch {
                         serviceController.stopMonitoringService()
                         apiToken.clear()
-                        loggedInUser = ""
                         currentScreen = "welcome"
 
                         Toast.makeText(context, "Logged out successfully", Toast.LENGTH_SHORT).show()
