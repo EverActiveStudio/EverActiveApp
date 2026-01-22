@@ -24,7 +24,7 @@ class AuthController(
     private val userService: UserService,
     private val authenticationManager: AuthenticationManager,
 ) {
-    @PostMapping(ApiRoutes.AUTH_LOGIN)
+    @PostMapping(ApiRoutes.Auth.LOGIN)
     fun login(@RequestBody request: LoginRequest): LoginResponse {
         val authentication = authenticationManager.authenticate(
             UsernamePasswordAuthenticationToken(request.email, request.password)
@@ -35,7 +35,7 @@ class AuthController(
         return LoginResponse(token)
     }
 
-    @PostMapping(ApiRoutes.AUTH_REGISTER)
+    @PostMapping(ApiRoutes.Auth.REGISTER)
     fun register(@RequestBody request: RegisterRequest): ResponseEntity<ApiResult<LoginResponse>> = when (val result = userService.register(request)) {
         RegistrationResult.Success -> {
             val authentication = authenticationManager.authenticate(

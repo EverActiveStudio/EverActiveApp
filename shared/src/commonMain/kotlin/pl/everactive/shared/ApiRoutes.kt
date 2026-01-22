@@ -1,10 +1,22 @@
 package pl.everactive.shared
 
 object ApiRoutes {
-    const val AUTH_LOGIN = "/api/auth/login"
-    const val AUTH_REGISTER = "/api/auth/register"
+    object Auth {
+        const val PREFIX = "/api/auth"
 
-    const val EVENTS = "/api/events"
+        const val LOGIN = "$PREFIX/login"
+        const val REGISTER = "$PREFIX/register"
+    }
 
-    const val USER_DATA = "/api/user/data"
+    object User {
+        const val PREFIX = "/api/user"
+
+        const val EVENTS = "$PREFIX/events"
+    }
+
+    object Manager {
+        const val PREFIX = "/api/manager"
+
+        const val USER_DATA = "$PREFIX/user-data"
+    }
 }

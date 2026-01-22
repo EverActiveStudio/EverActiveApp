@@ -8,6 +8,7 @@ import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.security.authentication.AuthenticationManager
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity
 import org.springframework.security.config.annotation.web.builders.HttpSecurity
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity
 import org.springframework.security.config.annotation.web.invoke
@@ -20,10 +21,13 @@ import org.springframework.security.oauth2.jwt.JwtEncoder
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder
 import org.springframework.security.oauth2.jwt.NimbusJwtEncoder
 import org.springframework.security.web.SecurityFilterChain
+import org.springframework.security.web.util.matcher.RequestMatchers
+import pl.everactive.shared.ApiRoutes
 import javax.crypto.spec.SecretKeySpec
 
 @Configuration
 @EnableWebSecurity
+@EnableMethodSecurity
 class SecurityConfig(
     private val props: JwtProperties,
 ) {
@@ -41,8 +45,10 @@ class SecurityConfig(
             }
 
             authorizeHttpRequests {
-                authorize("/api/auth/login", permitAll)
-                authorize("/api/auth/register", permitAll)
+                authorize(ApiRoutes.Auth.LOGIN, permitAll)
+                authorize(ApiRoutes.Auth.REGISTER, permitAll)
+
+                authorize("${ApiRoutes.Manager.PREFIX}/**", hasRole(Role.Manager.name))
 
                 authorize(anyRequest, authenticated)
             }
