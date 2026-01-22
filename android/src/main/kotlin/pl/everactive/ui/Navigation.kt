@@ -39,10 +39,10 @@ fun AppNavigation() {
         }
         "register" -> {
             RegisterScreen(
-                onRegisterSuccess = { username, supervisor ->
+                onRegisterSuccess = { email ->
                     Toast.makeText(
                         context,
-                        "Account created for $username\nAlerts sent to: $supervisor",
+                        "Account created for $email",
                         Toast.LENGTH_LONG
                     ).show()
 
