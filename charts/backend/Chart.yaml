@@ -3,4 +3,4 @@ name: backend
 description: EverActive backend
 type: application
 version: 0.1.0
-appVersion: "sha-605a158"
+appVersion: "sha-b365f45"

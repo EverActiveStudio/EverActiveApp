@@ -11,6 +11,7 @@ import jakarta.persistence.Id
 import jakarta.persistence.ManyToOne
 import jakarta.persistence.Table
 import kotlinx.serialization.json.Json
+import org.hibernate.annotations.ColumnTransformer
 import pl.everactive.backend.domain.EventData
 import java.time.LocalDateTime
 
@@ -29,6 +30,7 @@ class EventEntity(
 
     @Convert(converter = EventDataConverter::class)
     @Column(columnDefinition = "json", nullable = false)
+    @ColumnTransformer(write = "?::json")
     val data: EventData,
 ) {
     @Converter
