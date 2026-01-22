@@ -86,7 +86,7 @@ fun RegisterScreen(
                     singleLine = true,
                     modifier = Modifier.weight(1f),
                     colors = inputColors,
-                    enabled = !isLoading
+                    enabled = !isLoading,
                 )
 
                 OutlinedTextField(
@@ -96,7 +96,7 @@ fun RegisterScreen(
                     singleLine = true,
                     modifier = Modifier.weight(1f),
                     colors = inputColors,
-                    enabled = !isLoading
+                    enabled = !isLoading,
                 )
             }
 
@@ -109,7 +109,8 @@ fun RegisterScreen(
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
                 colors = inputColors,
-                enabled = !isLoading
+                enabled = !isLoading,
+                isError = email.isNotEmpty() && !isEmailValid
             )
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -131,7 +132,7 @@ fun RegisterScreen(
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
                 modifier = Modifier.fillMaxWidth(),
                 colors = inputColors,
-                enabled = !isLoading
+                enabled = !isLoading,
             )
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -153,8 +154,7 @@ fun RegisterScreen(
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
                 modifier = Modifier.fillMaxWidth(),
                 colors = inputColors,
-                isError = errorMessage != null,
-                enabled = !isLoading
+                enabled = !isLoading,
             )
 
             if (errorMessage != null) {
