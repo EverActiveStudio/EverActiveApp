@@ -2,7 +2,7 @@ package pl.everactive.backend.entities
 
 import jakarta.persistence.*
 import kotlinx.serialization.json.Json
-import pl.everactive.backend.domain.Rule
+import pl.everactive.shared.Rule
 
 
 @Entity

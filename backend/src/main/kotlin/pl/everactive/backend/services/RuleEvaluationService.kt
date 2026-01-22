@@ -1,12 +1,8 @@
 package pl.everactive.backend.services
 
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
 import org.springframework.scheduling.annotation.Async
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Service
-import pl.everactive.backend.domain.Rule
 import pl.everactive.backend.entities.GroupEntity
 import pl.everactive.backend.entities.RuleEntity
 import pl.everactive.backend.entities.RuleEventEntity
@@ -14,6 +10,7 @@ import pl.everactive.backend.entities.UserEntity
 import pl.everactive.backend.repositories.GroupRepository
 import pl.everactive.backend.repositories.RuleEventRepository
 import pl.everactive.backend.utils.getLogger
+import pl.everactive.shared.Rule
 import java.time.Duration
 import java.time.LocalDateTime
 import java.util.concurrent.ConcurrentHashMap

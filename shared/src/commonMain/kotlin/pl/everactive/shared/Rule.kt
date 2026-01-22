@@ -1,4 +1,4 @@
-package pl.everactive.backend.domain
+package pl.everactive.shared
 
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
