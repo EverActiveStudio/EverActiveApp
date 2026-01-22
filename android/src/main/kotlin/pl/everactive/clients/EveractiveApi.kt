@@ -7,6 +7,8 @@ import io.ktor.client.plugins.auth.*
 import io.ktor.client.plugins.auth.providers.*
 import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.client.request.*
+import io.ktor.http.ContentType
+import io.ktor.http.contentType
 import io.ktor.serialization.kotlinx.json.*
 import kotlinx.serialization.json.Json
 import pl.everactive.shared.ApiResult
@@ -19,11 +21,13 @@ import pl.everactive.shared.dtos.RegisterRequest
 class EveractiveApi(private val client: HttpClient) {
     suspend fun login(request: LoginRequest): LoginResponse = client
         .post(ApiRoutes.AUTH_LOGIN) {
+            contentType(ContentType.Application.Json)
             setBody(request)
         }.body()
 
     suspend fun register(request: RegisterRequest): ApiResult<LoginResponse> = client
         .post(ApiRoutes.AUTH_REGISTER) {
+            contentType(ContentType.Application.Json)
             setBody(request)
         }.body()
 

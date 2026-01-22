@@ -22,4 +22,10 @@ class DataStoreService(
 
     suspend fun secureGet(key: Preferences.Key<String>): String? =
         context.secureDataStore.data.firstOrNull()?.get(key)
+
+    suspend fun remove(key: Preferences.Key<String>) {
+        context.secureDataStore.edit { preferences ->
+            preferences.remove(key)
+        }
+    }
 }
