@@ -20,6 +20,8 @@ import org.springframework.security.oauth2.jwt.JwtDecoder
 import org.springframework.security.oauth2.jwt.JwtEncoder
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder
 import org.springframework.security.oauth2.jwt.NimbusJwtEncoder
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter
+import org.springframework.security.oauth2.server.resource.authentication.JwtGrantedAuthoritiesConverter
 import org.springframework.security.web.SecurityFilterChain
 import org.springframework.security.web.util.matcher.RequestMatchers
 import pl.everactive.shared.ApiRoutes
@@ -58,13 +60,14 @@ class SecurityConfig(
             }
 
             oauth2ResourceServer {
-                jwt { }
+                jwt {
+                    jwtAuthenticationConverter = authenticationConverter()
+                }
             }
         }
 
         return http.build()
     }
-
     @Bean
     fun jwtDecoder(): JwtDecoder = NimbusJwtDecoder.withSecretKey(secretKeySpec).build()
 
@@ -87,4 +90,14 @@ class SecurityConfig(
     @Bean
     fun authenticationManager(config: AuthenticationConfiguration): AuthenticationManager =
         config.authenticationManager
+
+
+    private fun authenticationConverter(): JwtAuthenticationConverter {
+        val grantedAuthoritiesConverter = JwtGrantedAuthoritiesConverter()
+        grantedAuthoritiesConverter.setAuthorityPrefix("")
+
+        val jwtAuthenticationConverter = JwtAuthenticationConverter()
+        jwtAuthenticationConverter.setJwtGrantedAuthoritiesConverter(grantedAuthoritiesConverter)
+        return jwtAuthenticationConverter
+    }
 }
