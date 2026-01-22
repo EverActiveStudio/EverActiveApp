@@ -14,27 +14,30 @@ import kotlinx.serialization.json.Json
 import pl.everactive.shared.ApiResult
 import pl.everactive.shared.ApiRoutes
 import pl.everactive.shared.PushEventsRequest
+import pl.everactive.shared.UserDataResponse
 import pl.everactive.shared.dtos.LoginRequest
 import pl.everactive.shared.dtos.LoginResponse
 import pl.everactive.shared.dtos.RegisterRequest
 
 class EveractiveApi(private val client: HttpClient) {
     suspend fun login(request: LoginRequest): LoginResponse = client
-        .post(ApiRoutes.AUTH_LOGIN) {
-            contentType(ContentType.Application.Json)
+        .post(ApiRoutes.Auth.LOGIN) {
             setBody(request)
         }.body()
 
     suspend fun register(request: RegisterRequest): ApiResult<LoginResponse> = client
-        .post(ApiRoutes.AUTH_REGISTER) {
-            contentType(ContentType.Application.Json)
+        .post(ApiRoutes.Auth.REGISTER) {
             setBody(request)
         }.body()
 
     suspend fun pushEvents(request: PushEventsRequest): ApiResult<Unit> = client
-        .post(ApiRoutes.EVENTS) {
+        .post(ApiRoutes.User.EVENTS) {
             setBody(request)
         }.body()
+
+    suspend fun managerGetAllUserData(): UserDataResponse = client
+        .get(ApiRoutes.Manager.USER_DATA)
+        .body()
 
     companion object {
         fun createKtorClient(
@@ -65,6 +68,7 @@ class EveractiveApi(private val client: HttpClient) {
 
             defaultRequest {
                 url(baseUrl)
+                contentType(ContentType.Application.Json)
             }
         }
     }
