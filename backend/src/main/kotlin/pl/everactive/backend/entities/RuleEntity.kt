@@ -2,6 +2,7 @@ package pl.everactive.backend.entities
 
 import jakarta.persistence.*
 import kotlinx.serialization.json.Json
+import org.hibernate.annotations.ColumnTransformer
 import pl.everactive.shared.Rule
 
 
@@ -17,6 +18,7 @@ class RuleEntity(
 
     @Convert(converter = RuleConverter::class)
     @Column(columnDefinition = "json", nullable = false)
+    @ColumnTransformer(write = "?::json")
     val rule: Rule,
 ) {
     @Converter
