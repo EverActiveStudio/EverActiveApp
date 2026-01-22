@@ -28,6 +28,19 @@ class UserStateService {
                 state.lastMoveTime = event.timestamp
             }
 
+            // FIXME: notifications
+            is EventData.Fall -> {
+                state.fellRecently = true
+            }
+
+            is EventData.SOS -> {
+                state.isSos = !event.data.cancel
+            }
+
+            is EventData.SignificantMotion -> {
+                state.lastMoveTime = event.timestamp
+            }
+
             EventData.Ping -> {}
         }
     }
@@ -40,11 +53,16 @@ class UserStateService {
         val lastLocation: EventData.Location?
         val lastMoveTime: LocalDateTime?
         val lastEventTime: LocalDateTime?
+
+        val isSos: Boolean
+        val fellRecently: Boolean
     }
 
     data class MutableState(
         override var lastLocation: EventData.Location? = null,
         override var lastMoveTime: LocalDateTime? = null,
         override var lastEventTime: LocalDateTime? = null,
+        override var isSos: Boolean = false,
+        override var fellRecently: Boolean = false,
     ) : State
 }

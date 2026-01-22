@@ -14,6 +14,18 @@ sealed interface EventDto {
     data class Ping(override val timestamp: Long) : EventDto
 
     @Serializable
+    @SerialName("SignificantMotion")
+    data class SignificantMotion(override val timestamp: Long, val totalDelta: Double) : EventDto
+
+    @Serializable
+    @SerialName("SOS")
+    data class SOS(override val timestamp: Long, val cancel: Boolean, val latitude: Double, val longitude: Double) : EventDto
+
+    @Serializable
+    @SerialName("Fall")
+    data class Fall(override val timestamp: Long, val latitude: Double, val longitude: Double) : EventDto
+
+    @Serializable
     @SerialName("Location")
     data class Location(
         override val timestamp: Long,
