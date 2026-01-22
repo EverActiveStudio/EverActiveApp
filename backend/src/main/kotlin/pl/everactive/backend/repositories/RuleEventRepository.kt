@@ -7,7 +7,7 @@ import pl.everactive.backend.entities.RuleEventEntity
 
 @Repository
 interface RuleEventRepository : JpaRepository<RuleEventEntity, Long> {
-    @Query(""")
+    @Query("""
         SELECT re1.*
         FROM rule_events re1
         JOIN (
