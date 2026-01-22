@@ -11,6 +11,10 @@ class EveractiveApiToken(
         dataStoreService.secureSet(TOKEN_KEY, token)
     }
 
+    suspend fun clear() {
+        dataStoreService.remove(TOKEN_KEY)
+    }
+
     companion object {
         private val TOKEN_KEY = stringPreferencesKey("api_token")
     }
