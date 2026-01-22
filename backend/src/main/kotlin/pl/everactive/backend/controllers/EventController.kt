@@ -15,7 +15,7 @@ import pl.everactive.shared.PushEventsRequest
 class EventController(
     private val eventService: EventService,
 ) {
-    @PostMapping(ApiRoutes.EVENTS)
+    @PostMapping(ApiRoutes.User.EVENTS)
     suspend fun pushEvents(@RequestBody request: PushEventsRequest): ResponseEntity<ApiResult<Unit>> {
         return when (val result = eventService.pushEvents(request)) {
             EventService.PushEventsResult.Success -> {

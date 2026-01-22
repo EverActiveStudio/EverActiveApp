@@ -3,6 +3,7 @@ package pl.everactive.clients
 import pl.everactive.shared.ApiResult
 import pl.everactive.shared.EventDto
 import pl.everactive.shared.PushEventsRequest
+import pl.everactive.shared.UserDataDto
 import pl.everactive.shared.dtos.LoginRequest
 import pl.everactive.shared.dtos.LoginResponse
 import pl.everactive.shared.dtos.RegisterRequest
@@ -47,4 +48,7 @@ class EveractiveApiClient(
     suspend fun pushEvents(events: List<EventDto>): ApiResult.Error<*>? =
         api.pushEvents(PushEventsRequest(events = events))
             as? ApiResult.Error
+
+    suspend fun managerGetAllUserData(): List<UserDataDto> =
+        api.managerGetAllUserData().users
 }
