@@ -69,12 +69,12 @@ fun AppNavigation() {
                     // Po zalogowaniu ponownie sprawdzamy rolę, aby przekierować w dobre miejsce
                     scope.launch {
                         val role = apiToken.getRole()
-//                        if (role == EveractiveApiToken.Role.Manager) {
-//                            currentScreen = "manager_dashboard"
-//                        } else {
-//                            currentScreen = "dashboard"
-//                        }
-                        currentScreen = "manager_dashboard"
+                        if (role == EveractiveApiToken.Role.Manager) {
+                            currentScreen = "manager_dashboard"
+                        } else {
+                            currentScreen = "dashboard"
+                        }
+//                        currentScreen = "manager_dashboard"
                     }
                 },
                 onBackClick = {
