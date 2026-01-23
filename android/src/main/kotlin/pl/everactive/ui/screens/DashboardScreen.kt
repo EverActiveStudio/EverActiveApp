@@ -173,7 +173,7 @@ fun DashboardScreen(
                 }
             }
 
-            Spacer(modifier = Modifier.weight(1f))
+            Spacer(modifier = Modifier.weight(2.5f))
 
             // RADAR / BUTTON
             Box(contentAlignment = Alignment.Center, modifier = Modifier.size(260.dp)) {
