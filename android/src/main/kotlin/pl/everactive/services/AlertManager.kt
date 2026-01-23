@@ -8,6 +8,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import pl.everactive.AlertStatus
 import pl.everactive.clients.EveractiveApiClient
 import pl.everactive.shared.EventDto
+import kotlin.coroutines.cancellation.CancellationException
 
 class AlertManager(
     private val apiClient: EveractiveApiClient
@@ -72,9 +73,13 @@ class AlertManager(
                     _timeRemaining.value -= 1
                 }
                 sendAlertToApi()
+            } catch (e: CancellationException) {
+                // Odliczanie zostało anulowane celowo przez użytkownika.
+                // Nie robimy nic (nie wysyłamy alertu).
+                throw e
             } catch (e: Exception) {
                 e.printStackTrace()
-                // W razie błędu odliczania, wymuszamy przejście do wysyłki (bezpieczeństwo)
+                // W razie innego błędu (np. crash logiki), wymuszamy wysyłkę
                 sendAlertToApi()
             }
         }
@@ -85,7 +90,6 @@ class AlertManager(
         val lon = lastKnownLocation?.longitude ?: 0.0
         val timestamp = System.currentTimeMillis()
 
-        // Tworzymy odpowiedni obiekt DTO w zależności od typu alarmu
         val eventToSend = when (pendingEventType) {
             EventType.FALL -> EventDto.Fall(timestamp, lat, lon)
             EventType.SOS -> EventDto.SOS(timestamp, cancel = false, lat, lon)
@@ -97,7 +101,6 @@ class AlertManager(
             _alertStatus.value = AlertStatus.SENT
         } catch (e: Exception) {
             e.printStackTrace()
-            // Nawet przy błędzie sieci zmieniamy status na SENT, aby poinformować użytkownika o zakończeniu procedury
             _alertStatus.value = AlertStatus.SENT
         }
     }
