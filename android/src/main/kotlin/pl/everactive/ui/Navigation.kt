@@ -65,7 +65,7 @@ fun AppNavigation() {
         "login" -> {
             LoginScreen(
                 onLoginSuccess = { email ->
-                    Toast.makeText(context, "Zalogowano jako $email", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, "Logged in as $email", Toast.LENGTH_SHORT).show()
                     // Po zalogowaniu ponownie sprawdzamy rolę, aby przekierować w dobre miejsce
                     scope.launch {
                         val role = apiToken.getRole()
@@ -90,7 +90,7 @@ fun AppNavigation() {
                 onRegisterSuccess = { email ->
                     Toast.makeText(
                         context,
-                        "Konto utworzone dla $email",
+                        "Account created for $email",
                         Toast.LENGTH_LONG
                     ).show()
                     // Po rejestracji domyślnie user (nie menadżer), więc dashboard
@@ -109,7 +109,7 @@ fun AppNavigation() {
                         serviceController.stopMonitoringService()
                         apiToken.clear()
                         currentScreen = "welcome"
-                        Toast.makeText(context, "Wylogowano pomyślnie", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, "Logged out successfully", Toast.LENGTH_SHORT).show()
                     }
                 }
             )
@@ -124,7 +124,7 @@ fun AppNavigation() {
                         serviceController.stopMonitoringService()
                         apiToken.clear()
                         currentScreen = "welcome"
-                        Toast.makeText(context, "Wylogowano pomyślnie", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, "Logged out successfully", Toast.LENGTH_SHORT).show()
                     }
                 }
             )

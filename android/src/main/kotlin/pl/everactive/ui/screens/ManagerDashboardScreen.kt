@@ -42,7 +42,7 @@ fun ManagerDashboardScreen(
             try {
                 users = apiClient.managerGetAllUserData()
             } catch (e: Exception) {
-                Toast.makeText(context, "Błąd pobierania danych: ${e.message}", Toast.LENGTH_LONG).show()
+                Toast.makeText(context, "Data fetching error: ${e.message}", Toast.LENGTH_LONG).show()
             } finally {
                 isLoading = false
             }
@@ -56,13 +56,13 @@ fun ManagerDashboardScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Panel Menadżera") },
+                title = { Text("Manager's Panel") },
                 actions = {
                     IconButton(onClick = { loadData() }) {
-                        Icon(Icons.Default.Refresh, contentDescription = "Odśwież")
+                        Icon(Icons.Default.Refresh, contentDescription = "Refresh")
                     }
                     IconButton(onClick = onLogoutClick) {
-                        Icon(Icons.AutoMirrored.Filled.Logout, contentDescription = "Wyloguj")
+                        Icon(Icons.AutoMirrored.Filled.Logout, contentDescription = "Logout")
                     }
                 }
             )
@@ -141,10 +141,10 @@ fun UserStatusCard(user: UserDataDto) {
 
             // Szczegóły statusu
             if (user.state.isSos) {
-                StatusBadge("SOS AKTYWNY", MaterialTheme.colorScheme.error)
+                StatusBadge("SOS ACTIVE", MaterialTheme.colorScheme.error)
             }
             if (user.state.fellRecently) {
-                StatusBadge("WYKRYTO UPADEK", MaterialTheme.colorScheme.error)
+                StatusBadge("FALL DETECTED", MaterialTheme.colorScheme.error)
             }
             if (!isDanger) {
                 StatusBadge("Status: OK", Color(0xFF4CAF50))
@@ -169,7 +169,7 @@ fun UserStatusCard(user: UserDataDto) {
                 HorizontalDivider()
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    text = "Historia Alertów",
+                    text = "ALERT HISTORY",
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.Bold
                 )
@@ -179,7 +179,7 @@ fun UserStatusCard(user: UserDataDto) {
                     val date = remember(ruleStatus.timestamp) {
                         SimpleDateFormat("dd.MM HH:mm", Locale.getDefault()).format(Date(ruleStatus.timestamp))
                     }
-                    val ruleName = ruleStatus.rule::class.simpleName ?: "Zasada"
+                    val ruleName = ruleStatus.rule::class.simpleName ?: "Rule"
                     val violationColor = if (ruleStatus.isViolated) MaterialTheme.colorScheme.error else Color.Gray
 
                     Row(
@@ -188,7 +188,7 @@ fun UserStatusCard(user: UserDataDto) {
                     ) {
                         Text(text = date, style = MaterialTheme.typography.bodySmall)
                         Text(
-                            text = if (ruleStatus.isViolated) "$ruleName (Naruszenie)" else "$ruleName (OK)",
+                            text = if (ruleStatus.isViolated) "$ruleName (Violation)" else "$ruleName (OK)",
                             style = MaterialTheme.typography.bodySmall,
                             color = violationColor,
                             fontWeight = if(ruleStatus.isViolated) FontWeight.Bold else FontWeight.Normal
