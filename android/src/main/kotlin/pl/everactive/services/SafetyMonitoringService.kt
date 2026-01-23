@@ -35,6 +35,7 @@ import pl.everactive.shared.EventDto
 import kotlin.math.abs
 import kotlin.math.pow
 import kotlin.math.sqrt
+import pl.everactive.services.DataStoreService
 
 class SafetyMonitoringService : Service(), SensorEventListener, LocationListener, KoinComponent {
 
@@ -64,7 +65,7 @@ class SafetyMonitoringService : Service(), SensorEventListener, LocationListener
     private var lastStepCount = 0
 
     // Wykrywanie Upadku
-    private val FALL_THRESHOLD = 15.0f // Próg 1.5G
+    private var fallThreshold = 15.0f
     private val IMMOBILITY_THRESHOLD = 3.5f
     private val FALL_ANALYSIS_WINDOW_MS = 5_000L
 
@@ -101,6 +102,18 @@ class SafetyMonitoringService : Service(), SensorEventListener, LocationListener
 
             apiClient = get()
             alertManager = get()
+
+            val dataStoreService: DataStoreService = get()
+
+            scope.launch {
+                dataStoreService.observeSensitivity().collect { sensitivity ->
+                    fallThreshold = when (sensitivity) {
+                        "MEDIUM" -> 20.0f // ok. 2.0g
+                        "HARD" -> 25.0f   // ok. 2.5g
+                        else -> 15.0f     // ok. 1.5g (SOFT)
+                    }
+                }
+            }
 
             wakeLock = powerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "Eve:FallAnalysisLock")
 
@@ -244,7 +257,7 @@ class SafetyMonitoringService : Service(), SensorEventListener, LocationListener
                     val acceleration = sqrt(x.pow(2) + y.pow(2) + z.pow(2))
 
                     // Logika Upadku z Cooldownem
-                    if (acceleration > FALL_THRESHOLD && !potentialFallDetected) {
+                    if (acceleration > fallThreshold && !potentialFallDetected) {
                         val currentTime = System.currentTimeMillis()
 
                         if (currentTime - lastShockTime > 3000) {

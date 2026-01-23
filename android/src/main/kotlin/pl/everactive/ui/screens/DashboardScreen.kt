@@ -34,7 +34,15 @@ import pl.everactive.clients.EveractiveApiClient
 import pl.everactive.services.AlertManager
 import pl.everactive.services.ServiceController
 import pl.everactive.utils.PermissionUtils
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.ExperimentalMaterial3Api
+import kotlinx.coroutines.launch
+import pl.everactive.services.DataStoreService
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DashboardScreen(
     onLogoutClick: () -> Unit
@@ -43,6 +51,10 @@ fun DashboardScreen(
     val serviceController: ServiceController = koinInject()
     val apiClient: EveractiveApiClient = koinInject()
     val alertManager: AlertManager = koinInject()
+
+    val dataStoreService: DataStoreService = koinInject()
+    val currentSensitivity by dataStoreService.observeSensitivity().collectAsState(initial = "SOFT")
+    val scope = rememberCoroutineScope()
 
     var isShiftActive by remember { mutableStateOf(false) }
     var currentShiftMillis by remember { mutableLongStateOf(0L) }
@@ -193,6 +205,54 @@ fun DashboardScreen(
                         if (isShiftActive) {
                             Text(formatDuration(shiftDurationSeconds), style = MaterialTheme.typography.titleLarge)
                         }
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.weight(1f))
+
+            // Sensitivity Menu
+            var expanded by remember { mutableStateOf(false) }
+            val options = listOf(
+                "SOFT" to "1.5g",
+                "MEDIUM" to "2.0g",
+                "HARD" to "2.5g"
+            )
+
+            val selectedOption = options.find { it.first == currentSensitivity } ?: options.first()
+            val displayText = "${selectedOption.first} (${selectedOption.second})"
+
+            ExposedDropdownMenuBox(
+                expanded = expanded,
+                onExpandedChange = { expanded = !expanded },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 32.dp)
+            ) {
+                OutlinedTextField(
+                    value = displayText,
+                    onValueChange = {},
+                    readOnly = true,
+                    label = { Text("Fall Sensitivity") },
+                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+                    colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors(),
+                    modifier = Modifier.menuAnchor().fillMaxWidth()
+                )
+
+                ExposedDropdownMenu(
+                    expanded = expanded,
+                    onDismissRequest = { expanded = false }
+                ) {
+                    options.forEach { (level, gVal) ->
+                        DropdownMenuItem(
+                            text = { Text("$level ($gVal)") },
+                            onClick = {
+                                scope.launch {
+                                    dataStoreService.secureSet(DataStoreService.SENSITIVITY_KEY, level)
+                                }
+                                expanded = false
+                            }
+                        )
                     }
                 }
             }
