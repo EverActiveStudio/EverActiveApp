@@ -1,5 +1,6 @@
 package pl.everactive.backend.services
 
+import jakarta.transaction.Transactional
 import org.springframework.scheduling.annotation.Async
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Service
@@ -28,6 +29,7 @@ class RuleEvaluationService(
 
     @Scheduled(fixedRate = 60_000)
     @Async
+    @Transactional
     fun evaluateAllRules() {
         val currentTime = LocalDateTime.now()
         val groups = groupRepository.findAll()

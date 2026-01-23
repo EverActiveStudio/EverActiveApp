@@ -27,7 +27,7 @@ class UserEntity(
     @Enumerated(EnumType.STRING)
     var role: Role,
 
-    @ManyToOne(optional = true, fetch = FetchType.LAZY)
+    @ManyToOne(optional = true, fetch = FetchType.EAGER)
     var group: GroupEntity? = null,
 ) : UserDetails {
     override fun getAuthorities(): Collection<GrantedAuthority> = listOf(SimpleGrantedAuthority("ROLE_${role.name}"))
