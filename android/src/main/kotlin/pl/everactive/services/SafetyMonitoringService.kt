@@ -35,7 +35,6 @@ import pl.everactive.shared.EventDto
 import kotlin.math.abs
 import kotlin.math.pow
 import kotlin.math.sqrt
-import pl.everactive.services.DataStoreService
 
 class SafetyMonitoringService : Service(), SensorEventListener, LocationListener, KoinComponent {
 
@@ -43,7 +42,7 @@ class SafetyMonitoringService : Service(), SensorEventListener, LocationListener
         private const val NOTIFICATION_ID = 1
         private const val CHANNEL_ID = "safety_monitoring_channel"
         private const val ALERT_NOTIFICATION_ID = 999
-        private const val LOCATION_UPDATE_INTERVAL_MS = 60000L // 1 minuta
+        private const val LOCATION_UPDATE_INTERVAL_MS = 60000L
         private const val EVENT_BATCH_SIZE = 10
         private const val EVENT_SEND_INTERVAL_MS = 5000L
     }
@@ -51,34 +50,35 @@ class SafetyMonitoringService : Service(), SensorEventListener, LocationListener
     private val binder = ServiceBinder()
     private var isMonitoring = false
 
-    // Sensory
     private lateinit var sensorManager: SensorManager
     private var stepDetectorSensor: Sensor? = null
     private var accelerometerSensor: Sensor? = null
-
-    // Lokalizacja
     private lateinit var locationManager: LocationManager
     private var lastLocation: Location? = null
 
-    // Kroki
     private var stepCount = 0
     private var lastStepCount = 0
 
-    // Wykrywanie Upadku
-    private var fallThreshold = 15.0f
+    // --- LOGIKA UPADKU ---
+    private var impactThreshold = 25.0f // Domyślnie ~2.5g
+    private val FREE_FALL_THRESHOLD_G = 6.0f
+    private val MIN_FALL_DURATION_MS = 250L
+    private val MAX_IMPACT_WINDOW_MS = 1000L
+
+    private var freeFallStartTime: Long = 0
+    private var lastValidFreeFallTime: Long = 0
+
+    // Zmienna do przechowywania siły ostatniego wykrytego uderzenia (do debugowania)
+    private var lastTriggeringGForce: Float = 0.0f
+
     private val IMMOBILITY_THRESHOLD = 3.5f
     private val FALL_ANALYSIS_WINDOW_MS = 5_000L
 
     private var potentialFallDetected = false
     private val recentAccelerationData = ArrayDeque<Float>(50)
-
-    // Zmienna Anty-Spamowa (Cooldown)
     private var lastShockTime = 0L
 
-    // Zależności
     private val scope = CoroutineScope(Dispatchers.Main.immediate + SupervisorJob())
-
-    // LISTA ZDARZEŃ - musi być chroniona!
     private val eventList = mutableListOf<EventDto>()
 
     private lateinit var apiClient: EveractiveApiClient
@@ -94,7 +94,6 @@ class SafetyMonitoringService : Service(), SensorEventListener, LocationListener
     override fun onCreate() {
         super.onCreate()
 
-        // Bezpieczna inicjalizacja
         try {
             sensorManager = getSystemService(Context.SENSOR_SERVICE) as SensorManager
             locationManager = getSystemService(Context.LOCATION_SERVICE) as LocationManager
@@ -107,10 +106,12 @@ class SafetyMonitoringService : Service(), SensorEventListener, LocationListener
 
             scope.launch {
                 dataStoreService.observeSensitivity().collect { sensitivity ->
-                    fallThreshold = when (sensitivity) {
-                        "MEDIUM" -> 20.0f // ok. 2.0g
-                        "HARD" -> 25.0f   // ok. 2.5g
-                        else -> 15.0f     // ok. 1.5g (SOFT)
+                    impactThreshold = when (sensitivity) {
+                        // 1g = ~9.81 m/s^2
+                        // ZWIĘKSZONE PROGI:
+                        "MEDIUM" -> 80.0f // ~4.0g (Mocne uderzenie)
+                        "HARD" -> 130.0f   // ~6.0g (Bardzo mocne, np. beton)
+                        else -> 30.0f     // ~2.5g (SOFT - domyślne)
                     }
                 }
             }
@@ -127,15 +128,13 @@ class SafetyMonitoringService : Service(), SensorEventListener, LocationListener
     @RequiresPermission(allOf = [Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION])
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
-            ACTION_START_MONITORING -> {
-                startMonitoring()
-            }
+            ACTION_START_MONITORING -> startMonitoring()
             ACTION_STOP_MONITORING -> {
                 stopMonitoring()
                 stopSelfResult(startId)
             }
         }
-        return START_NOT_STICKY // Zmiana na NOT_STICKY, żeby system nie restartował serwisu bez intencji
+        return START_NOT_STICKY
     }
 
     private fun initializeSensors() {
@@ -152,38 +151,18 @@ class SafetyMonitoringService : Service(), SensorEventListener, LocationListener
         try {
             val notification = createNotification()
             if (Build.VERSION.SDK_INT >= 34) {
-                ServiceCompat.startForeground(
-                    this,
-                    NOTIFICATION_ID,
-                    notification,
-                    ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION
-                )
+                ServiceCompat.startForeground(this, NOTIFICATION_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION)
             } else {
                 startForeground(NOTIFICATION_ID, notification)
             }
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
+        } catch (e: Exception) { e.printStackTrace() }
 
-        stepDetectorSensor?.let {
-            sensorManager.registerListener(this, it, SensorManager.SENSOR_DELAY_NORMAL)
-        }
-
-        accelerometerSensor?.let {
-            sensorManager.registerListener(this, it, SensorManager.SENSOR_DELAY_GAME)
-        }
+        stepDetectorSensor?.let { sensorManager.registerListener(this, it, SensorManager.SENSOR_DELAY_NORMAL) }
+        accelerometerSensor?.let { sensorManager.registerListener(this, it, SensorManager.SENSOR_DELAY_GAME) }
 
         try {
-            locationManager.requestLocationUpdates(
-                LocationManager.GPS_PROVIDER,
-                LOCATION_UPDATE_INTERVAL_MS,
-                0f,
-                this,
-                Looper.getMainLooper()
-            )
-        } catch (e: SecurityException) {
-            // Ignorujemy brak uprawnień
-        }
+            locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, LOCATION_UPDATE_INTERVAL_MS, 0f, this, Looper.getMainLooper())
+        } catch (e: SecurityException) { /* ignore */ }
 
         startEventSync()
         recordEvent(EventDto.Ping(timestamp = System.currentTimeMillis()))
@@ -193,7 +172,6 @@ class SafetyMonitoringService : Service(), SensorEventListener, LocationListener
         if (!isMonitoring) return
         isMonitoring = false
 
-        // Wyrejestrowanie sensorów
         try {
             sensorManager.unregisterListener(this)
             locationManager.removeUpdates(this)
@@ -201,15 +179,10 @@ class SafetyMonitoringService : Service(), SensorEventListener, LocationListener
 
         analysisJob?.cancel()
         releaseWakeLock()
-
-        // Anulowanie pętli synchronizacji
         scope.coroutineContext.cancelChildren()
 
-        // BEZPIECZNE WYSŁANIE OSTATNICH DANYCH (Fix dla ConcurrentModificationException)
         GlobalScope.launch {
             val finalEvents = mutableListOf<EventDto>()
-
-            // Kopiujemy dane w bloku synchronized
             synchronized(eventList) {
                 if (stepCount > lastStepCount) {
                     eventList.add(EventDto.Move(timestamp = System.currentTimeMillis(), steps = stepCount - lastStepCount))
@@ -218,14 +191,8 @@ class SafetyMonitoringService : Service(), SensorEventListener, LocationListener
                 finalEvents.addAll(eventList)
                 eventList.clear()
             }
-
-            // Wysyłamy kopię (już bez blokady synchronized)
             if (finalEvents.isNotEmpty()) {
-                try {
-                    apiClient.pushEvents(finalEvents)
-                } catch (e: Exception) {
-                    e.printStackTrace()
-                }
+                try { apiClient.pushEvents(finalEvents) } catch (e: Exception) { e.printStackTrace() }
             }
         }
     }
@@ -256,17 +223,36 @@ class SafetyMonitoringService : Service(), SensorEventListener, LocationListener
 
                     val acceleration = sqrt(x.pow(2) + y.pow(2) + z.pow(2))
 
-                    // Logika Upadku z Cooldownem
-                    if (acceleration > fallThreshold && !potentialFallDetected) {
-                        val currentTime = System.currentTimeMillis()
-
-                        if (currentTime - lastShockTime > 3000) {
-                            lastShockTime = currentTime
-                            handlePotentialFall()
+                    // 1. FREE FALL CHECK
+                    if (acceleration < FREE_FALL_THRESHOLD_G) {
+                        if (freeFallStartTime == 0L) freeFallStartTime = System.currentTimeMillis()
+                    } else {
+                        if (freeFallStartTime != 0L) {
+                            val duration = System.currentTimeMillis() - freeFallStartTime
+                            if (duration >= MIN_FALL_DURATION_MS) {
+                                lastValidFreeFallTime = System.currentTimeMillis()
+                            }
+                            freeFallStartTime = 0L
                         }
                     }
 
-                    // Buforowanie
+                    // 2. IMPACT CHECK
+                    if (acceleration > impactThreshold && !potentialFallDetected) {
+                        val currentTime = System.currentTimeMillis()
+                        val timeSinceLastFall = currentTime - lastValidFreeFallTime
+
+                        if (timeSinceLastFall < MAX_IMPACT_WINDOW_MS) {
+                            if (currentTime - lastShockTime > 3000) {
+                                lastShockTime = currentTime
+
+                                // Zapisujemy siłę uderzenia w jednostkach g (9.81 m/s^2 = 1g)
+                                lastTriggeringGForce = acceleration / 9.81f
+
+                                handlePotentialFall()
+                            }
+                        }
+                    }
+
                     if (potentialFallDetected) {
                         synchronized(recentAccelerationData) {
                             if (recentAccelerationData.size >= 50) recentAccelerationData.removeFirst()
@@ -286,9 +272,9 @@ class SafetyMonitoringService : Service(), SensorEventListener, LocationListener
 
         analysisJob?.cancel()
         analysisJob = scope.launch(Dispatchers.Default) {
+            // Czekamy, aż użytkownik się uspokoi po upadku
             delay(FALL_ANALYSIS_WINDOW_MS)
 
-            // Sprawdzenie czy użytkownik wciąż leży
             if (isUserStill()) {
                 withContext(Dispatchers.Main) {
                     triggerManDownAlert()
@@ -310,16 +296,20 @@ class SafetyMonitoringService : Service(), SensorEventListener, LocationListener
     }
 
     private fun triggerManDownAlert() {
-        // Wszystko w try-catch, aby błąd UI/Alertu nie ubił serwisu
         try {
-            // 1. Logika biznesowa
             alertManager.triggerSOS()
 
-            // 2. Powiadomienie
+            // Formatujemy siłę do 1 miejsca po przecinku (np. "4.5g")
+            val forceText = "Impact: %.1fg".format(lastTriggeringGForce)
+
+            // 1. Toast dla szybkiego debugowania na ekranie
+            Toast.makeText(this, "Fall Detected! $forceText", Toast.LENGTH_LONG).show()
+
+            // 2. Powiadomienie z informacją o sile
             val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
             val notification = NotificationCompat.Builder(this, CHANNEL_ID)
                 .setSmallIcon(android.R.drawable.ic_dialog_alert)
-                .setContentTitle("Fall detection")
+                .setContentTitle("Fall Detected ($forceText)") // <--- TUTAJ WYŚWIETLAMY SIŁĘ
                 .setContentText("Rescue procedure initiated.")
                 .setPriority(NotificationCompat.PRIORITY_MAX)
                 .setDefaults(Notification.DEFAULT_ALL)
@@ -334,15 +324,11 @@ class SafetyMonitoringService : Service(), SensorEventListener, LocationListener
     }
 
     private fun acquireWakeLock() {
-        try {
-            wakeLock?.takeIf { !it.isHeld }?.acquire(FALL_ANALYSIS_WINDOW_MS + 2000)
-        } catch (e: Exception) { /* ignore */ }
+        try { wakeLock?.takeIf { !it.isHeld }?.acquire(FALL_ANALYSIS_WINDOW_MS + 2000) } catch (e: Exception) {}
     }
 
     private fun releaseWakeLock() {
-        try {
-            if (wakeLock?.isHeld == true) wakeLock?.release()
-        } catch (e: Exception) { /* ignore */ }
+        try { if (wakeLock?.isHeld == true) wakeLock?.release() } catch (e: Exception) {}
     }
 
     private fun startEventSync() {
@@ -356,58 +342,33 @@ class SafetyMonitoringService : Service(), SensorEventListener, LocationListener
 
     private suspend fun sendPendingEvents() {
         var eventsToSend: MutableList<EventDto>
-
-        // 1. Kopiujemy dane szybko w bloku synchronized
         synchronized(eventList) {
             if (eventList.isEmpty()) return
             eventsToSend = eventList.take(EVENT_BATCH_SIZE).toMutableList()
         }
-
-        // 2. Wysyłamy (wolno, poza blokadą)
         try {
             apiClient.pushEvents(eventsToSend)
-
-            // 3. Usuwamy wysłane (szybko w bloku synchronized)
-            synchronized(eventList) {
-                eventList.removeAll(eventsToSend)
-            }
-        } catch (e: Exception) {
-            // Błąd sieci - dane zostają
-        }
+            synchronized(eventList) { eventList.removeAll(eventsToSend) }
+        } catch (e: Exception) { }
     }
 
     private fun recordEvent(event: EventDto) {
-        synchronized(eventList) {
-            eventList.add(event)
-        }
+        synchronized(eventList) { eventList.add(event) }
     }
 
-    // --- BOILERPLATE ---
     override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {}
     override fun onLocationChanged(location: Location) {
         if (!isMonitoring) return
-
         lastLocation = location
         alertManager.updateLocation(location)
-
-        recordEvent(
-            EventDto.Location(
-                timestamp = System.currentTimeMillis(),
-                latitude = location.latitude,
-                longitude = location.longitude
-            )
-        )
+        recordEvent(EventDto.Location(timestamp = System.currentTimeMillis(), latitude = location.latitude, longitude = location.longitude))
     }
-
     override fun onProviderEnabled(provider: String) {}
     override fun onProviderDisabled(provider: String) {}
 
     private fun createNotification(): Notification {
-        val intent = Intent(this, MainActivity::class.java).apply {
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP
-        }
+        val intent = Intent(this, MainActivity::class.java).apply { flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP }
         val pendingIntent = PendingIntent.getActivity(this, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
-
         return NotificationCompat.Builder(this, CHANNEL_ID)
             .setContentTitle("EverActive Safety")
             .setContentText("Monitorowanie aktywne")
@@ -427,7 +388,6 @@ class SafetyMonitoringService : Service(), SensorEventListener, LocationListener
     }
 
     override fun onBind(intent: Intent?): IBinder = binder
-
     override fun onDestroy() {
         super.onDestroy()
         stopMonitoring()
