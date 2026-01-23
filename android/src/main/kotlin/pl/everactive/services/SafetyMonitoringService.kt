@@ -306,17 +306,14 @@ class SafetyMonitoringService : Service(), SensorEventListener, LocationListener
             val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
             val notification = NotificationCompat.Builder(this, CHANNEL_ID)
                 .setSmallIcon(android.R.drawable.ic_dialog_alert)
-                .setContentTitle("ALARM UPADKU")
-                .setContentText("Procedura ratunkowa uruchomiona.")
+                .setContentTitle("Fall detection")
+                .setContentText("Rescue procedure initiated.")
                 .setPriority(NotificationCompat.PRIORITY_MAX)
                 .setDefaults(Notification.DEFAULT_ALL)
                 .setAutoCancel(true)
                 .build()
 
             notificationManager.notify(ALERT_NOTIFICATION_ID, notification)
-
-            // 3. Debug Toast (opcjonalnie)
-            Toast.makeText(applicationContext, "Wykryto upadek!", Toast.LENGTH_LONG).show()
 
         } catch (e: Exception) {
             e.printStackTrace()
@@ -376,8 +373,17 @@ class SafetyMonitoringService : Service(), SensorEventListener, LocationListener
     override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {}
     override fun onLocationChanged(location: Location) {
         if (!isMonitoring) return
+
         lastLocation = location
-        recordEvent(EventDto.Location(timestamp = System.currentTimeMillis(), latitude = location.latitude, longitude = location.longitude))
+        alertManager.updateLocation(location)
+
+        recordEvent(
+            EventDto.Location(
+                timestamp = System.currentTimeMillis(),
+                latitude = location.latitude,
+                longitude = location.longitude
+            )
+        )
     }
 
     override fun onProviderEnabled(provider: String) {}
