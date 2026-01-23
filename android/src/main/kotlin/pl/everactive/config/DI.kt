@@ -16,9 +16,9 @@ val mainModule = module {
 
     singleOf(::EveractiveApiToken)
     single {
-        val client = EveractiveApi.createKtorClient(BuildConfig.API_BASE_URL, get())
+        val client = EveractiveApi.createKtorClient(BuildConfig.API_BASE_URL)
 
-        EveractiveApi(client)
+        EveractiveApi(client, get())
     }
     singleOf(::EveractiveApiClient)
 
