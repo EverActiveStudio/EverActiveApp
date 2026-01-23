@@ -6,10 +6,6 @@ image:
 nameOverride: ""
 fullnameOverride: ""
 
-serviceAccount:
-  create: true
-  name: ""
-
 podSecurityContext: {}
 securityContext: {}
 

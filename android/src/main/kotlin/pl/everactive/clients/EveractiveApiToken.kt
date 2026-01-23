@@ -1,5 +1,6 @@
 package pl.everactive.clients
 
+import android.util.Log
 import androidx.datastore.preferences.core.stringPreferencesKey
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
@@ -24,13 +25,17 @@ class EveractiveApiToken(
 
         return try {
             val parts = token.split(".")
+
             if (parts.size < 2) return null
             val decoded = Base64.getUrlDecoder().decode(parts[1])
             val jsonString = String(decoded, Charsets.UTF_8)
             val data = json.decodeFromString<TokenData>(jsonString)
 
+            Log.d("EveractiveApiToken", "Decoded token data: $data")
+
             Role.fromScope(data.scope)
         } catch (e: Exception) {
+            Log.d("EveractiveApiToken", "Error decoding token: ${e.message}")
             null
         }
     }

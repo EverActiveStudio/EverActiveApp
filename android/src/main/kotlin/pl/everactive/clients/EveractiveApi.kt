@@ -22,7 +22,18 @@ import pl.everactive.shared.dtos.LoginRequest
 import pl.everactive.shared.dtos.LoginResponse
 import pl.everactive.shared.dtos.RegisterRequest
 
-class EveractiveApi(private val client: HttpClient) {
+class EveractiveApi(
+    private val client: HttpClient,
+    private val token: EveractiveApiToken,
+) {
+    private suspend fun HttpRequestBuilder.addAuthorizationHeader() {
+        val token = token.get()
+
+        headers {
+            append("Authorization", "Bearer $token")
+        }
+    }
+
     suspend fun login(request: LoginRequest): LoginResponse {
         val response = client.post(ApiRoutes.Auth.LOGIN) {
             setBody(request)
@@ -40,37 +51,23 @@ class EveractiveApi(private val client: HttpClient) {
     suspend fun pushEvents(request: PushEventsRequest): ApiResult<Unit> = client
         .post(ApiRoutes.User.EVENTS) {
             setBody(request)
+            addAuthorizationHeader()
         }.body()
 
     suspend fun managerGetAllUserData(): UserDataResponse = client
-        .get(ApiRoutes.Manager.USER_DATA)
+        .get(ApiRoutes.Manager.USER_DATA) {
+            addAuthorizationHeader()
+        }
         .body()
 
     companion object {
-        fun createKtorClient(
-            baseUrl: String,
-            apiToken: EveractiveApiToken,
-        ) = HttpClient {
+        fun createKtorClient(baseUrl: String) = HttpClient {
             install(ContentNegotiation) {
                 json(Json {
                     ignoreUnknownKeys = true
                     prettyPrint = true
                     isLenient = true
                 })
-            }
-
-            install(Auth) {
-                bearer {
-                    loadTokens {
-                        apiToken.get()
-                            ?.let { BearerTokens(it, "") }
-                    }
-
-                    refreshTokens {
-                        // FIXME: implement token refresh
-                        null
-                    }
-                }
             }
 
             install(Logging) {
