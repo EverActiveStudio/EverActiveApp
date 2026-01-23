@@ -11,6 +11,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 
+enum class AlertStatus {
+    NONE,
+    PENDING,
+    SENT,
+    ERROR
+}
 @Composable
 fun StatusAlert(
     title: String,

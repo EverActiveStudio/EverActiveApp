@@ -18,6 +18,7 @@ import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
 import pl.everactive.clients.EveractiveApiToken
 import pl.everactive.services.ServiceController
+import pl.everactive.ui.screens.ManagerDashboardScreen
 
 @Composable
 fun AppNavigation() {
@@ -26,14 +27,18 @@ fun AppNavigation() {
     val scope = rememberCoroutineScope()
 
     var currentScreen by remember { mutableStateOf<String?>(null) }
-    var loggedInUser by remember { mutableStateOf("") }
     val context = LocalContext.current
 
     LaunchedEffect(Unit) {
         val token = apiToken.get()
         if (!token.isNullOrBlank()) {
-            loggedInUser = "user"
-            currentScreen = "dashboard"
+            // SPRAWDZANIE ROLI
+            val role = apiToken.getRole()
+            if (role == EveractiveApiToken.Role.Manager) {
+                currentScreen = "manager_dashboard"
+            } else {
+                currentScreen = "dashboard"
+            }
         } else {
             currentScreen = "welcome"
         }
@@ -60,9 +65,17 @@ fun AppNavigation() {
         "login" -> {
             LoginScreen(
                 onLoginSuccess = { email ->
-                    loggedInUser = email
-                    Toast.makeText(context, "Logged in as $email", Toast.LENGTH_SHORT).show()
-                    currentScreen = "dashboard"
+                    Toast.makeText(context, "Zalogowano jako $email", Toast.LENGTH_SHORT).show()
+                    // Po zalogowaniu ponownie sprawdzamy rolę, aby przekierować w dobre miejsce
+                    scope.launch {
+                        val role = apiToken.getRole()
+//                        if (role == EveractiveApiToken.Role.Manager) {
+//                            currentScreen = "manager_dashboard"
+//                        } else {
+//                            currentScreen = "dashboard"
+//                        }
+                        currentScreen = "manager_dashboard"
+                    }
                 },
                 onBackClick = {
                     currentScreen = "welcome"
@@ -77,11 +90,10 @@ fun AppNavigation() {
                 onRegisterSuccess = { email ->
                     Toast.makeText(
                         context,
-                        "Account created for $email",
+                        "Konto utworzone dla $email",
                         Toast.LENGTH_LONG
                     ).show()
-
-                    loggedInUser = email
+                    // Po rejestracji domyślnie user (nie menadżer), więc dashboard
                     currentScreen = "dashboard"
                 },
                 onBackToLoginClick = {
@@ -92,16 +104,27 @@ fun AppNavigation() {
 
         "dashboard" -> {
             DashboardScreen(
-                username = loggedInUser,
                 onLogoutClick = {
-                    // Start a coroutine to handle suspend functions and service calls
                     scope.launch {
                         serviceController.stopMonitoringService()
                         apiToken.clear()
-                        loggedInUser = ""
                         currentScreen = "welcome"
+                        Toast.makeText(context, "Wylogowano pomyślnie", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            )
+        }
 
-                        Toast.makeText(context, "Logged out successfully", Toast.LENGTH_SHORT).show()
+        // NOWY EKRAN DLA MENADŻERA
+        "manager_dashboard" -> {
+            ManagerDashboardScreen(
+                onLogoutClick = {
+                    scope.launch {
+                        // Menadżer raczej nie używa serwisu monitoringu, ale dla pewności zatrzymujemy
+                        serviceController.stopMonitoringService()
+                        apiToken.clear()
+                        currentScreen = "welcome"
+                        Toast.makeText(context, "Wylogowano pomyślnie", Toast.LENGTH_SHORT).show()
                     }
                 }
             )

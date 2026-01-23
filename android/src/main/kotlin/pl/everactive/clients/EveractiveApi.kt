@@ -1,12 +1,15 @@
 package pl.everactive.clients
 
+import android.util.Log
 import io.ktor.client.*
 import io.ktor.client.call.*
 import io.ktor.client.plugins.*
 import io.ktor.client.plugins.auth.*
 import io.ktor.client.plugins.auth.providers.*
 import io.ktor.client.plugins.contentnegotiation.*
+import io.ktor.client.plugins.logging.*
 import io.ktor.client.request.*
+import io.ktor.client.statement.bodyAsText
 import io.ktor.http.ContentType
 import io.ktor.http.contentType
 import io.ktor.serialization.kotlinx.json.*
@@ -20,10 +23,14 @@ import pl.everactive.shared.dtos.LoginResponse
 import pl.everactive.shared.dtos.RegisterRequest
 
 class EveractiveApi(private val client: HttpClient) {
-    suspend fun login(request: LoginRequest): LoginResponse = client
-        .post(ApiRoutes.Auth.LOGIN) {
+    suspend fun login(request: LoginRequest): LoginResponse {
+        val response = client.post(ApiRoutes.Auth.LOGIN) {
             setBody(request)
-        }.body()
+        }
+        // Wypisz w logach co przyszło
+        println("DEBUG LOGIN: Status=${response.status} Body=${response.bodyAsText()}")
+        return response.body()
+    }
 
     suspend fun register(request: RegisterRequest): ApiResult<LoginResponse> = client
         .post(ApiRoutes.Auth.REGISTER) {
@@ -64,6 +71,15 @@ class EveractiveApi(private val client: HttpClient) {
                         null
                     }
                 }
+            }
+
+            install(Logging) {
+                logger = object : Logger {
+                    override fun log(message: String) {
+                        Log.d("KtorClient", message) // Loguje pod tagiem "KtorClient"
+                    }
+                }
+                level = LogLevel.ALL // "ALL" pokaże też treść błędu (JSON), "HEADERS" tylko nagłówki
             }
 
             defaultRequest {
