@@ -211,16 +211,10 @@ fun DashboardScreen(
 
             Spacer(modifier = Modifier.weight(1f))
 
-            // Sensitivity Menu
             var expanded by remember { mutableStateOf(false) }
-            val options = listOf(
-                "SOFT" to "1.5g",
-                "MEDIUM" to "2.0g",
-                "HARD" to "2.5g"
-            )
-
-            val selectedOption = options.find { it.first == currentSensitivity } ?: options.first()
-            val displayText = "${selectedOption.first} (${selectedOption.second})"
+            val options = listOf("SOFT", "MEDIUM", "HARD")
+            val selectedOption = options.find { it == currentSensitivity } ?: options.first()
+            val displayText = selectedOption
 
             ExposedDropdownMenuBox(
                 expanded = expanded,
@@ -243,9 +237,9 @@ fun DashboardScreen(
                     expanded = expanded,
                     onDismissRequest = { expanded = false }
                 ) {
-                    options.forEach { (level, gVal) ->
+                    options.forEach { level ->
                         DropdownMenuItem(
-                            text = { Text("$level ($gVal)") },
+                            text = { Text("$level") },
                             onClick = {
                                 scope.launch {
                                     dataStoreService.secureSet(DataStoreService.SENSITIVITY_KEY, level)
