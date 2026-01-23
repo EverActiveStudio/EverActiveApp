@@ -16,6 +16,8 @@ class EveractiveApiClient(
     private val token: EveractiveApiToken,
 ) {
     suspend fun login(email: String, rawPassword: String) {
+        token.clear()
+
         // FIXME: controller advice -> ApiResult
         val response = api.login(
             LoginRequest(
@@ -28,6 +30,7 @@ class EveractiveApiClient(
     }
 
     suspend fun register(name: String, email: String, rawPassword: String): ApiResult.Error<*>? {
+        token.clear()
         val response = api.register(
             RegisterRequest(
                 email = email,
