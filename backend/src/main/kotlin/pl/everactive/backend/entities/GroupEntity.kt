@@ -16,9 +16,9 @@ class GroupEntity(
     @OneToMany(mappedBy = "group")
     val users: MutableList<UserEntity> = mutableListOf(),
 
-    @OneToMany(mappedBy = "group")
+    @OneToMany(mappedBy = "group", fetch = FetchType.EAGER)
     val rules: MutableList<RuleEntity> = mutableListOf(),
 
-    @OneToMany(mappedBy = "group")
+    @OneToMany(mappedBy = "group", fetch = FetchType.EAGER)
     val timeFrames: MutableList<TimeFrameEntity> = mutableListOf(),
 )
