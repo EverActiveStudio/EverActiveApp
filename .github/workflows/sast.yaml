@@ -72,11 +72,11 @@ jobs:
       - name: Run Detekt
         run: |
           chmod +x gradlew
-          ./gradlew detekt --build-upon-default-config --report sarif:build/reports/detekt/detekt.sarif
+          ./gradlew detekt --continue
         continue-on-error: true
 
       - name: Upload Detekt results to GitHub
         uses: github/codeql-action/upload-sarif@v3
         with:
-          sarif_file: build/reports/detekt/detekt.sarif
+          sarif_file: .
           category: detekt
