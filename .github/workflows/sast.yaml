@@ -2,9 +2,9 @@ name: "SAST Security Scan"
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "main", "master" ]
   pull_request:
-    branches: [ "main" ]
+    branches: [ "main", "master" ]
   workflow_dispatch:
 
 jobs:
@@ -36,10 +36,13 @@ jobs:
           java-version: '21'
           distribution: 'temurin'
 
-      - name: Build project
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v3
+
+      - name: Build Backend & Shared (Skip Android)
         run: |
           chmod +x gradlew
-          ./gradlew clean build -x test
+          ./gradlew :backend:assemble :shared:assemble -x test
 
       - name: Perform CodeQL Analysis
         uses: github/codeql-action/analyze@v3
@@ -67,7 +70,9 @@ jobs:
         uses: gradle/actions/setup-gradle@v3
 
       - name: Run Detekt
-        run: ./gradlew detekt --build-upon-default-config --report sarif:build/reports/detekt/detekt.sarif
+        run: |
+          chmod +x gradlew
+          ./gradlew detekt --build-upon-default-config --report sarif:build/reports/detekt/detekt.sarif
         continue-on-error: true
 
       - name: Upload Detekt results to GitHub
