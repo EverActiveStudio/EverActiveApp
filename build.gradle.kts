@@ -13,4 +13,20 @@ plugins {
 
     alias(libs.plugins.spring) apply false
     alias(libs.plugins.springDependencyManagement) apply false
+
+    alias(libs.plugins.detekt) apply false
+}
+
+val detektVersion: String = libs.versions.detekt.get()
+allprojects {
+    apply(plugin = "io.gitlab.arturbosch.detekt")
+
+    extensions.configure<io.gitlab.arturbosch.detekt.extensions.DetektExtension> {
+        toolVersion = detektVersion
+        buildUponDefaultConfig = true
+    }
+
+    tasks.withType<io.gitlab.arturbosch.detekt.Detekt>().configureEach {
+        jvmTarget = "11"
+    }
 }
