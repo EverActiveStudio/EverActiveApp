@@ -13,4 +13,15 @@ plugins {
 
     alias(libs.plugins.spring) apply false
     alias(libs.plugins.springDependencyManagement) apply false
+
+    alias(libs.plugins.detekt) apply false
+}
+
+allprojects {
+    apply(plugin = "io.gitlab.arturbosch.detekt")
+
+    extensions.configure<io.gitlab.arturbosch.detekt.extensions.DetektExtension> {
+        toolVersion = libs.versions.detekt.get()
+        buildUponDefaultConfig = true
+    }
 }
