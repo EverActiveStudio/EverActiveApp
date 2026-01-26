@@ -17,11 +17,16 @@ plugins {
     alias(libs.plugins.detekt) apply false
 }
 
+val detektVersion: String = libs.versions.detekt.get()
 allprojects {
     apply(plugin = "io.gitlab.arturbosch.detekt")
 
     extensions.configure<io.gitlab.arturbosch.detekt.extensions.DetektExtension> {
-        toolVersion = libs.versions.detekt.get()
+        toolVersion = detektVersion
         buildUponDefaultConfig = true
+    }
+
+    tasks.withType<io.gitlab.arturbosch.detekt.Detekt>().configureEach {
+        jvmTarget = "11"
     }
 }
