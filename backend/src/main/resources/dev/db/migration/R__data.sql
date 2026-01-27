@@ -2,3 +2,10 @@ INSERT INTO users (id, email, name, password, role)
 VALUES (1, 'test@everactive.pl', 'Test User', '{bcrypt}$2a$10$jp21f02i/pDdP81AGT3gku3bYiZU.ClMAoSruQY0rN1lPbcYiTCVa', 'User')
 ON CONFLICT (id) DO NOTHING
 ;
+
+INSERT INTO users (id, email, name, password, role)
+VALUES (2, 'test-manager@everactive.pl', 'Test Manager', '{bcrypt}$2a$10$jp21f02i/pDdP81AGT3gku3bYiZU.ClMAoSruQY0rN1lPbcYiTCVa', 'Manager')
+ON CONFLICT (id) DO NOTHING
+;
+
+ALTER SEQUENCE users_id_seq RESTART WITH 50;

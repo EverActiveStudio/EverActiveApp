@@ -1,0 +1,76 @@
+name: Backend DAST
+
+on:
+  pull_request:
+    paths:
+      - 'backend/**'
+  workflow_dispatch:
+
+jobs:
+  zap_scan:
+    name: Run ZAP Scan
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v3
+
+      - name: Build Backend
+        run: ./gradlew :backend:bootJar
+
+      - name: Start Backend with Docker Compose
+        run: |
+          cd backend/dev
+          docker compose up -d --build
+
+          echo "Waiting for service to start..."
+          timeout 120s bash -c 'until curl -s http://localhost:8088 > /dev/null; do sleep 5; done' || (docker compose logs && exit 1)
+          echo "Service is up!"
+
+      - name: Prepare ZAP Environment
+        run: ./scripts/prepare-dast.sh
+
+      - name: Run ZAP Scan (Automation Framework)
+        continue-on-error: true
+        run: |
+          # Run ZAP using the Automation Framework plan
+          docker run --network host \
+            -e "_JAVA_OPTIONS=-Xmx4g" \
+            -v $(pwd)/zap-reports:/zap/wrk/:rw \
+            -t ghcr.io/zaproxy/zaproxy:stable \
+            zap.sh -cmd -autorun /zap/wrk/zap.yaml
+
+      - name: Upload ZAP Reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: zap-reports
+          path: |
+            zap-reports/zap-report.html
+            zap-reports/zap-report.sarif.json
+
+# https://github.com/github/codeql-action/issues/754
+#      - name: Upload SARIF file
+#        if: always()
+#        uses: github/codeql-action/upload-sarif@v3
+#        with:
+#          sarif_file: zap-reports/zap-report.sarif.json
+#          category: zap-combined
+
+      - name: Stop Containers
+        if: always()
+        run: |
+          cd backend/dev
+          docker compose down
