@@ -48,6 +48,7 @@ class SecurityConfig(
 
             authorizeHttpRequests {
                 authorize("/api/health", permitAll)
+                authorize("/actuator/**", permitAll)
                 authorize(ApiRoutes.Auth.LOGIN, permitAll)
                 authorize(ApiRoutes.Auth.REGISTER, permitAll)
 

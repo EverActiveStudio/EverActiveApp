@@ -12,3 +12,9 @@ spring:
     url: jdbc:postgresql://db:5432/everactive_dev
     username: postgres
     password: postgres
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "*"
