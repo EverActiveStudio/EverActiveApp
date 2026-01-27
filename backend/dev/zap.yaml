@@ -1,0 +1,124 @@
+env:
+  contexts:
+    - name: "Default Context"
+      urls:
+        - "http://localhost:8088/api/health"
+        - "http://localhost:8088"
+        - "http://localhost:8088/api/auth/login"
+        - "http://localhost:8088/api/auth/register"
+        - "http://localhost:8088/api/user/events"
+        - "http://localhost:8088/api/manager/user-data"
+      includePaths:
+        - "http://localhost:8088.*"
+      excludePaths: []
+
+jobs:
+  - type: passiveScan-config
+    parameters:
+      maxAlertsPerRule: 10
+      scanOnlyInScope: true
+      maxBodySizeInBytesToScan: 0
+      enableTags: false
+
+  # === Register Scripts ===
+  - type: script
+    parameters:
+      action: "add"
+      type: "httpsender"
+      engine: "Graal.js"
+      name: "AddAuthHeader"
+      file: "/zap/wrk/add-auth-header.js"
+
+  - type: script
+    parameters:
+      action: "add"
+      type: "standalone"
+      engine: "Graal.js"
+      name: "SetTokenNoAuth"
+      file: "/zap/wrk/set-token-noauth.js"
+
+  - type: script
+    parameters:
+      action: "add"
+      type: "standalone"
+      engine: "Graal.js"
+      name: "SetTokenUser"
+      file: "/zap/wrk/set-token-user.js"
+
+  - type: script
+    parameters:
+      action: "add"
+      type: "standalone"
+      engine: "Graal.js"
+      name: "SetTokenManager"
+      file: "/zap/wrk/set-token-manager.js"
+
+  # No Auth
+  - type: script
+    parameters:
+      action: "run"
+      type: "standalone"
+      name: "SetTokenNoAuth"
+
+  - type: spider
+    parameters:
+      context: "Default Context"
+      user: ""
+      url: "http://localhost:8088/api/health"
+      maxDuration: 2
+      maxDepth: 5
+      maxChildren: 0
+
+  # User
+  - type: script
+    parameters:
+      action: "run"
+      type: "standalone"
+      name: "SetTokenUser"
+
+  - type: spider
+    parameters:
+      context: "Default Context"
+      user: ""
+      url: "http://localhost:8088/api/health"
+      maxDuration: 2
+      maxDepth: 5
+      maxChildren: 0
+
+  # Manager
+  - type: script
+    parameters:
+      action: "run"
+      type: "standalone"
+      name: "SetTokenManager"
+
+  - type: spider
+    parameters:
+      context: "Default Context"
+      user: ""
+      url: "http://localhost:8088/api/health"
+      maxDuration: 2
+      maxDepth: 5
+      maxChildren: 0
+
+  - type: passiveScan-wait
+    parameters:
+      maxDuration: 0
+
+  - type: activeScan
+    parameters:
+      context: "Default Context"
+      maxScanDurationInMins: 10
+      threadPerHost: 2
+
+  - type: report
+    parameters:
+      template: "traditional-html"
+      reportDir: "/zap/wrk/"
+      reportFile: "zap-report.html"
+
+  - type: report
+    parameters:
+      template: "sarif-json"
+      reportDir: "/zap/wrk/"
+      reportFile: "zap-report.sarif.json"
