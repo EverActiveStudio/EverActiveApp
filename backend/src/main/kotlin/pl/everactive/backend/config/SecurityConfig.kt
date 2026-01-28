@@ -47,6 +47,8 @@ class SecurityConfig(
             }
 
             authorizeHttpRequests {
+                authorize("/", permitAll)
+                authorize("/webjars/**", permitAll)
                 authorize("/api/health", permitAll)
                 authorize(ApiRoutes.Auth.LOGIN, permitAll)
                 authorize(ApiRoutes.Auth.REGISTER, permitAll)

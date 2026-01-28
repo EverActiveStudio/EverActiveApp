@@ -19,6 +19,14 @@ play-services-location = "21.3.0"
 composeMultiplatform = "1.9.1"
 koin = "4.1.1"
 
+kotlinx-html = "0.12.0"
+kotlinx-css = "2025.11.0"
+jlessc = "1.15"
+webjars-locator = "1.1.3"
+htmx = "2.0.8"
+hyperscript = "0.9.14"
+picocss = "1.5.6"
+
 spring = "4.0.0"
 spring-dependency-management = "1.1.7"
 foundation = "1.10.0"
@@ -76,6 +84,14 @@ koin-android = { module = "io.insert-koin:koin-android" }
 koin-compose = { module = "io.insert-koin:koin-compose" }
 koin-compose-viewmodel = { module = "io.insert-koin:koin-compose-viewmodel" }
 koin-compose-navigation = { module = "io.insert-koin:koin-compose-viewmodel-navigation" }
+
+kotlinx-html = { module = "org.jetbrains.kotlinx:kotlinx-html", version.ref = "kotlinx-html" }
+kotlinx-css = { module = "org.jetbrains.kotlin-wrappers:kotlin-css", version.ref = "kotlinx-css" }
+jlessc = { module = "de.inetsoftware:jlessc", version.ref = "jlessc" }
+webjars-locator-lite = { module = "org.webjars:webjars-locator-lite", version.ref = "webjars-locator" }
+webjars-htmx = { module = "org.webjars.npm:htmx.org", version.ref = "htmx" }
+webjars-hyperscript = { module = "org.webjars.npm:hyperscript.org", version.ref = "hyperscript" }
+webjars-picocss = { module = "org.webjars.bowergithub.picocss:pico", version.ref = "picocss" }
 
 [plugins]
 kotlinJvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
