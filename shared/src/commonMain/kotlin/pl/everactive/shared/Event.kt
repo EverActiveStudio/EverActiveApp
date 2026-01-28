@@ -56,3 +56,6 @@ data class PushEventsRequest(val events: List<EventDto>) {
         }
     }
 }
+
+@Serializable
+data class PushEventsResponse(val triggeredRules: List<Rule>)
