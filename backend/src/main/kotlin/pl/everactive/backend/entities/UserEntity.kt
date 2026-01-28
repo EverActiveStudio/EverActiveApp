@@ -21,7 +21,7 @@ class UserEntity(
 
     @Column(nullable = false, length = 255)
     @get:JvmName("getPasswordInternal")
-    var password: String,
+    var password: String?,
 
     @Column(nullable = false, length = 31)
     @Enumerated(EnumType.STRING)
@@ -31,6 +31,6 @@ class UserEntity(
     var group: GroupEntity? = null,
 ) : UserDetails {
     override fun getAuthorities(): Collection<GrantedAuthority> = listOf(SimpleGrantedAuthority("ROLE_${role.name}"))
-    override fun getPassword(): String = password
+    override fun getPassword(): String? = password
     override fun getUsername(): String = email
 }
