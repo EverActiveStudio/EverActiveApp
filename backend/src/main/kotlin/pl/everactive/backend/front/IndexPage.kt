@@ -2,7 +2,9 @@ package pl.everactive.backend.front
 
 import kotlinx.html.*
 
-class IndexPage : BasePage("Everactive") {
+class IndexPage(
+    private val isError: Boolean,
+) : BasePage("Everactive") {
     override fun BODY.body() {
         h3 {
             +"Log in"
@@ -17,6 +19,12 @@ class IndexPage : BasePage("Everactive") {
             }
             input(type = InputType.submit) {
                 value = "Log in"
+            }
+
+            if (isError) {
+                p {
+                    +"Invalid username or password."
+                }
             }
         }
     }

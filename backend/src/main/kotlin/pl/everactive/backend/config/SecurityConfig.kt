@@ -49,6 +49,8 @@ class SecurityConfig(
             }
 
             authorizeHttpRequests {
+                authorize("/", permitAll)
+                authorize("/login", permitAll)
                 authorize("/webjars/**", permitAll)
                 authorize("/api/health", permitAll)
                 authorize(ApiRoutes.Auth.LOGIN, permitAll)
@@ -74,7 +76,7 @@ class SecurityConfig(
                     } else {
                         SecurityContextHolder.clearContext()
                         request.session.invalidate()
-                        response.sendRedirect("/?error")
+                        response.sendRedirect("/?error=true")
                     }
                 }
                 permitAll()
