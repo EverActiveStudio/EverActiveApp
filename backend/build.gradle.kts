@@ -35,6 +35,14 @@ dependencies {
 
     implementation(libs.konform)
 
+    implementation(libs.kotlinx.html)
+    implementation(libs.kotlinx.css)
+    implementation(libs.jlessc)
+    implementation(libs.webjars.locator.lite)
+    implementation(libs.webjars.htmx)
+    implementation(libs.webjars.hyperscript)
+    implementation(libs.webjars.picocss)
+
     runtimeOnly(libs.postgresql)
 
     testImplementation(libs.spring.boot.starter.data.jpa.test)
