@@ -2,8 +2,10 @@ package pl.everactive.backend.front
 
 import kotlinx.css.LinearDimension
 import kotlinx.css.Margin
+import kotlinx.css.Padding
 import kotlinx.css.body
 import kotlinx.css.margin
+import kotlinx.css.padding
 import kotlinx.css.rem
 import kotlinx.html.*
 import kotlinx.html.stream.createHTML
@@ -11,7 +13,7 @@ import pl.everactive.backend.utils.css
 
 private val baseCss = css {
     body {
-        margin = Margin(2.rem)
+        padding = Padding(2.rem)
     }
 }
 

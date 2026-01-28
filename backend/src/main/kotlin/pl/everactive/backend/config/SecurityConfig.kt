@@ -23,7 +23,9 @@ import org.springframework.security.oauth2.jwt.NimbusJwtEncoder
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter
 import org.springframework.security.oauth2.server.resource.authentication.JwtGrantedAuthoritiesConverter
 import org.springframework.security.web.SecurityFilterChain
-import org.springframework.security.web.util.matcher.RequestMatchers
+import org.springframework.security.web.authentication.AuthenticationSuccessHandler
+import org.springframework.security.web.authentication.SimpleUrlAuthenticationSuccessHandler
+import org.springframework.security.core.context.SecurityContextHolder
 import pl.everactive.shared.ApiRoutes
 import javax.crypto.spec.SecretKeySpec
 
@@ -47,19 +49,35 @@ class SecurityConfig(
             }
 
             authorizeHttpRequests {
-                authorize("/", permitAll)
                 authorize("/webjars/**", permitAll)
                 authorize("/api/health", permitAll)
                 authorize(ApiRoutes.Auth.LOGIN, permitAll)
                 authorize(ApiRoutes.Auth.REGISTER, permitAll)
 
+                authorize("/manager/**", hasRole(Role.Manager.name))
                 authorize("${ApiRoutes.Manager.PREFIX}/**", hasRole(Role.Manager.name))
 
                 authorize(anyRequest, authenticated)
             }
 
             sessionManagement {
-                sessionCreationPolicy = SessionCreationPolicy.STATELESS
+                sessionCreationPolicy = SessionCreationPolicy.IF_REQUIRED
+            }
+
+            formLogin {
+                loginPage = "/"
+                loginProcessingUrl = "/login"
+                authenticationSuccessHandler = AuthenticationSuccessHandler { request, response, authentication ->
+                    if (authentication.authorities.any { it.authority == "ROLE_${Role.Manager.name}" }) {
+                        SimpleUrlAuthenticationSuccessHandler("/manager/")
+                            .onAuthenticationSuccess(request, response, authentication)
+                    } else {
+                        SecurityContextHolder.clearContext()
+                        request.session.invalidate()
+                        response.sendRedirect("/?error")
+                    }
+                }
+                permitAll()
             }
 
             oauth2ResourceServer {
