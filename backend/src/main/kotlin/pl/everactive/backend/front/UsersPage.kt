@@ -12,22 +12,28 @@ class UsersPage(
     override fun BODY.body() {
         // Nagłówek i przycisk powrotu
         div {
-            style = "display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;"
-            h2 { +"Lista użytkowników" }
+            style = "display: flex; justify-content: space-between; align-items: center; width: 100%; border-bottom: 1px solid #2c5364; padding-bottom: 1rem;"
+
+            h2 {
+                style = "margin: 0;"
+                +"Zarządzanie Użytkownikami"
+            }
 
             div {
-                style = "display: flex; gap: 10px;"
+                style = "display: flex; gap: 1rem;"
 
-                // NOWY PRZYCISK
-                a(href = "/manager/users/create", classes = "primary") {
+                a(href = "/manager/users/create") {
                     role = "button"
-                    style = "background-color: #4ca1af; color: white; border: none; padding: 10px 20px; text-decoration: none; border-radius: 4px;"
-                    +"Dodaj użytkownika"
+                    style = "background-color: #4ca1af; border: none;"
+                    +"Dodaj"
                 }
 
-                a(href = "/manager/", classes = "secondary") {
-                    style = "padding: 10px; color: grey;"
-                    +"Powrót"
+                form(action = "/logout", method = FormMethod.post) {
+                    style = "margin: 0;"
+                    button(type = ButtonType.submit) {
+                        style = "background-color: transparent; border: 1px solid #e74c3c; color: #e74c3c; margin: 0;"
+                        +"Wyloguj"
+                    }
                 }
             }
         }
@@ -64,21 +70,21 @@ class UsersPage(
                             a(href = "/manager/users/${user.id}/edit") {
                                 role = "button"
                                 style = """
-            display: flex;                /* Ważne: Flex wewnątrz przycisku centruje tekst */
-            align-items: center;
-            justify-content: center;
-            height: 36px;                 /* Sztywna wysokość */
-            padding: 0 12px;              /* Padding tylko boczny, wysokość ustala height */
-            background-color: #2980b9;    /* Niebieski */
-            color: white;
-            border: 1px solid #2980b9;    /* Ramka */
-            border-radius: 4px;
-            text-decoration: none;
-            font-size: 0.85rem;
-            font-weight: 500;
-            box-sizing: border-box;       /* Padding nie powiększa elementu */
-            line-height: 1;               /* Reset wysokości linii */
-        """.trimIndent()
+                                    display: flex;                /* Ważne: Flex wewnątrz przycisku centruje tekst */
+                                    align-items: center;
+                                    justify-content: center;
+                                    height: 36px;                 /* Sztywna wysokość */
+                                    padding: 0 12px;              /* Padding tylko boczny, wysokość ustala height */
+                                    background-color: #2980b9;    /* Niebieski */
+                                    color: white;
+                                    border: 1px solid #2980b9;    /* Ramka */
+                                    border-radius: 4px;
+                                    text-decoration: none;
+                                    font-size: 0.85rem;
+                                    font-weight: 500;
+                                    box-sizing: border-box;       /* Padding nie powiększa elementu */
+                                    line-height: 1;               /* Reset wysokości linii */
+                                """.trimIndent()
                                 +"Edytuj"
                             }
 
@@ -89,22 +95,22 @@ class UsersPage(
 
                                 button(type = ButtonType.submit) {
                                     style = """
-                display: flex;            /* Tak samo jak w linku wyżej */
-                align-items: center;
-                justify-content: center;
-                height: 36px;             /* Identyczna wysokość co Edytuj */
-                padding: 0 12px;
-                background-color: #e74c3c; /* Czerwony */
-                color: white;
-                border: 1px solid #e74c3c; /* Ramka */
-                border-radius: 4px;
-                cursor: pointer;
-                font-size: 0.85rem;
-                font-weight: 500;
-                box-sizing: border-box;
-                line-height: 1;
-                font-family: inherit;      /* Ważne: buttony czasem mają inną czcionkę */
-            """.trimIndent()
+                                        display: flex;            /* Tak samo jak w linku wyżej */
+                                        align-items: center;
+                                        justify-content: center;
+                                        height: 36px;             /* Identyczna wysokość co Edytuj */
+                                        padding: 0 12px;
+                                        background-color: #e74c3c; /* Czerwony */
+                                        color: white;
+                                        border: 1px solid #e74c3c; /* Ramka */
+                                        border-radius: 4px;
+                                        cursor: pointer;
+                                        font-size: 0.85rem;
+                                        font-weight: 500;
+                                        box-sizing: border-box;
+                                        line-height: 1;
+                                        font-family: inherit;      /* Ważne: buttony czasem mają inną czcionkę */
+                                    """.trimIndent()
 
                                     onClick = "return confirm('Czy na pewno chcesz usunąć użytkownika ${user.name}?')"
 
