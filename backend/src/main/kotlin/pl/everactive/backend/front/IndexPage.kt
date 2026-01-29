@@ -38,14 +38,6 @@ class IndexPage(
                         p { style = "color: #d81b60; font-size: 0.8rem; text-align: center;"; +"Błędny email lub hasło." }
                     }
                 }
-
-                footer {
-                    p {
-                        style = "text-align: center; margin-bottom: 0;"
-                        +"Nie masz konta? "
-                        a(href = "/register") { +"Zarejestruj się" }
-                    }
-                }
             }
         }
     }
