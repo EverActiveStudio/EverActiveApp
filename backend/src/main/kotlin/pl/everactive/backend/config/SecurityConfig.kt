@@ -51,6 +51,8 @@ class SecurityConfig(
             authorizeHttpRequests {
                 authorize("/", permitAll)
                 authorize("/login", permitAll)
+                authorize("/register", permitAll)        // Dodaj to: wyświetlanie formularza
+                authorize("/register/save", permitAll)   // Dodaj to: przetwarzanie danych
                 authorize("/webjars/**", permitAll)
                 authorize("/api/health", permitAll)
                 authorize(ApiRoutes.Auth.LOGIN, permitAll)
@@ -80,6 +82,13 @@ class SecurityConfig(
                     }
                 }
                 permitAll()
+            }
+
+            logout {
+                logoutUrl = "/logout"
+                logoutSuccessUrl = "/?logout=true" // Przekierowanie na stronę główną po wylogowaniu
+                invalidateHttpSession = true
+                deleteCookies("JSESSIONID")
             }
 
             oauth2ResourceServer {
