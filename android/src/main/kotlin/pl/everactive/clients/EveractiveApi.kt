@@ -17,6 +17,7 @@ import kotlinx.serialization.json.Json
 import pl.everactive.shared.ApiResult
 import pl.everactive.shared.ApiRoutes
 import pl.everactive.shared.PushEventsRequest
+import pl.everactive.shared.PushEventsResponse
 import pl.everactive.shared.UserDataResponse
 import pl.everactive.shared.dtos.LoginRequest
 import pl.everactive.shared.dtos.LoginResponse
@@ -48,7 +49,7 @@ class EveractiveApi(
             setBody(request)
         }.body()
 
-    suspend fun pushEvents(request: PushEventsRequest): ApiResult<Unit> = client
+    suspend fun pushEvents(request: PushEventsRequest): ApiResult<PushEventsResponse> = client
         .post(ApiRoutes.User.EVENTS) {
             setBody(request)
             addAuthorizationHeader()

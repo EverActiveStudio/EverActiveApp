@@ -27,6 +27,9 @@ class RuleEvaluationService(
     private val log = getLogger()
     private val lastEvaluationResults = ConcurrentHashMap<Pair<Long, Long>, Boolean>()
 
+    // hack :c
+    private val evaluationResultsPerUser = ConcurrentHashMap<Long, List<Pair<RuleEntity, Boolean>>>()
+
     @Scheduled(fixedRate = 60_000)
     @Async
     @Transactional
@@ -43,10 +46,14 @@ class RuleEvaluationService(
             group.users.forEach { user ->
                 val state = userStateService.getStateSnapshot(user)
 
-                group.rules.forEach { rule ->
+                evaluationResultsPerUser[user.id!!] = group.rules.map { rule ->
                     val result = evaluate(rule.rule, state)
 
-                    handleEvaluationResult(rule, user, result, currentTime, events)
+                    runCatching {
+                        handleEvaluationResult(rule, user, result, currentTime, events)
+                    }
+
+                    rule to result
                 }
             }
         }
@@ -58,6 +65,13 @@ class RuleEvaluationService(
                 log.error("Failed to save rule events", e)
             }
         }
+    }
+
+    fun getTriggeredRulesForCurrentUser(userId: Long): List<Rule> {
+        return evaluationResultsPerUser[userId]
+            ?.filter { it.second }
+            ?.map { it.first.rule }
+            ?: emptyList()
     }
 
     private fun shouldBeEvaluated(group: GroupEntity, currentTime: LocalDateTime): Boolean {
