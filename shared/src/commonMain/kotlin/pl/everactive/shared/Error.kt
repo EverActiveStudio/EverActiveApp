@@ -11,7 +11,7 @@ sealed interface ApiResult<T: Any> {
 
     @Serializable
     @SerialName("error")
-    data class Error<T: Any>(val type: Type, val message: String = "") : ApiResult<T> {
+    data class Error<T: Any>(val errorType: Type, val message: String = "") : ApiResult<T> {
         enum class Type {
             Generic,
             Validation,
