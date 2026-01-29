@@ -1,5 +1,6 @@
 package pl.everactive.config
 
+import org.koin.core.module.dsl.createdAtStart
 import org.koin.core.module.dsl.singleOf
 import org.koin.dsl.module
 import pl.everactive.BuildConfig
