@@ -30,7 +30,7 @@ class RuleEvaluationService(
     // hack :c
     private val evaluationResultsPerUser = ConcurrentHashMap<Long, List<Pair<RuleEntity, Boolean>>>()
 
-    @Scheduled(fixedRate = 60_000)
+    @Scheduled(fixedRate = 5_000)
     @Async
     @Transactional
     fun evaluateAllRules() {
