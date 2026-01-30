@@ -3,7 +3,7 @@ package pl.everactive.shared
 import kotlinx.serialization.Serializable
 
 @Serializable
-data class UserDataResponse(val users: List<UserDataDto>)
+data class UserDataResponse(val users: List<UserDataDto>) : ApiPayload
 
 @Serializable
 data class UserDataDto(

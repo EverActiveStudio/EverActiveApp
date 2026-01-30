@@ -4,7 +4,6 @@ import kotlinx.html.*
 
 class IndexPage(
     private val isError: Boolean,
-    private val isRegistered: Boolean = false,
 ) : BasePage("Everactive") {
     override fun BODY.body() {
         div(classes = "centered-container") { // Ta klasa wyśrodkuje tylko ten formularz

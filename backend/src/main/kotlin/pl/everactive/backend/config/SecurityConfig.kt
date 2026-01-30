@@ -51,8 +51,6 @@ class SecurityConfig(
             authorizeHttpRequests {
                 authorize("/", permitAll)
                 authorize("/login", permitAll)
-                authorize("/register", permitAll)        // Dodaj to: wyświetlanie formularza
-                authorize("/register/save", permitAll)   // Dodaj to: przetwarzanie danych
                 authorize("/webjars/**", permitAll)
                 authorize("/api/health", permitAll)
                 authorize(ApiRoutes.Auth.LOGIN, permitAll)

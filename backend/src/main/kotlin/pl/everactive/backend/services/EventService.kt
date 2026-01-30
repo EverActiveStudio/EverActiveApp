@@ -6,17 +6,19 @@ import jakarta.annotation.PreDestroy
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.consumeAsFlow
+import kotlinx.serialization.json.Json
 import org.springframework.stereotype.Service
 import pl.everactive.backend.domain.toDomain
 import pl.everactive.backend.entities.EventEntity
+import pl.everactive.backend.entities.UserEntity
 import pl.everactive.backend.repositories.EventRepository
 import pl.everactive.backend.utils.getLogger
 import pl.everactive.backend.utils.toUtcDateTime
 import pl.everactive.shared.PushEventsRequest
+import pl.everactive.shared.Rule
 
 @Service
 class EventService(
-    private val requestService: RequestService,
     private val eventRepository: EventRepository,
     private val userStateService: UserStateService,
 ) {
@@ -24,13 +26,12 @@ class EventService(
     private val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
     private val channel = Channel<EventEntity>(capacity = 1000)
 
-    suspend fun pushEvents(request: PushEventsRequest): PushEventsResult = coroutineScope {
+    suspend fun pushEvents(request: PushEventsRequest, user: UserEntity): PushEventsResult = coroutineScope {
         val validationResult = PushEventsRequest.validate(request)
         if (validationResult is Invalid) {
             return@coroutineScope PushEventsResult.Failure(validationResult.errors.first().message)
         }
 
-        val user = requestService.userId
         val events = request.events.map {
             EventEntity(
                 user = user,
