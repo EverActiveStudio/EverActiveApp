@@ -14,9 +14,9 @@ import pl.everactive.shared.ApiResult
 import pl.everactive.shared.ApiResult.Error
 import pl.everactive.shared.ApiResult.Success
 import pl.everactive.shared.ApiRoutes
-import pl.everactive.shared.dtos.LoginRequest
-import pl.everactive.shared.dtos.LoginResponse
-import pl.everactive.shared.dtos.RegisterRequest
+import pl.everactive.shared.LoginRequest
+import pl.everactive.shared.LoginResponse
+import pl.everactive.shared.RegisterRequest
 
 @RestController
 class AuthController(

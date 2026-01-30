@@ -22,9 +22,11 @@ class EventController(
 ) {
     @PostMapping(ApiRoutes.User.EVENTS)
     suspend fun pushEvents(@RequestBody request: PushEventsRequest): ResponseEntity<ApiResult<PushEventsResponse>> {
-        return when (val result = eventService.pushEvents(request)) {
+        val user = requestService.userId
+        val userId = checkNotNull(user.id)
+
+        return when (val result = eventService.pushEvents(request, user)) {
             EventService.PushEventsResult.Success -> {
-                val userId = checkNotNull(requestService.userId.id)
                 val response = PushEventsResponse(
                     triggeredRules = ruleEvaluationService.getTriggeredRulesForCurrentUser(userId),
                 )

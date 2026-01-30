@@ -11,7 +11,7 @@ import pl.everactive.backend.entities.UserEntity
 import pl.everactive.backend.repositories.RuleEventRepository
 import pl.everactive.backend.repositories.UserRepository
 import pl.everactive.shared.UserDataDto
-import pl.everactive.shared.dtos.RegisterRequest
+import pl.everactive.shared.RegisterRequest
 import java.time.ZoneOffset
 
 @Service

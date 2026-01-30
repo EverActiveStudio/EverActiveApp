@@ -1,4 +1,4 @@
-package pl.everactive.shared.dtos
+package pl.everactive.shared
 
 import io.konform.validation.Validation
 import io.konform.validation.jsonschema.maxLength
@@ -10,7 +10,7 @@ import kotlinx.serialization.Serializable
 data class LoginRequest(val email: String, val password: String)
 
 @Serializable
-data class LoginResponse(val token: String)
+data class LoginResponse(val token: String) : ApiPayload
 
 @Serializable
 data class RegisterRequest(

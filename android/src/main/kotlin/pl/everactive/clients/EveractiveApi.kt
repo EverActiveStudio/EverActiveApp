@@ -19,9 +19,10 @@ import pl.everactive.shared.ApiRoutes
 import pl.everactive.shared.PushEventsRequest
 import pl.everactive.shared.PushEventsResponse
 import pl.everactive.shared.UserDataResponse
-import pl.everactive.shared.dtos.LoginRequest
-import pl.everactive.shared.dtos.LoginResponse
-import pl.everactive.shared.dtos.RegisterRequest
+import pl.everactive.shared.LoginRequest
+import pl.everactive.shared.LoginResponse
+import pl.everactive.shared.RegisterRequest
+import pl.everactive.shared.serialization.ApiPayloadSerializersModule
 
 class EveractiveApi(
     private val client: HttpClient,
@@ -68,6 +69,7 @@ class EveractiveApi(
                     ignoreUnknownKeys = true
                     prettyPrint = true
                     isLenient = true
+                    serializersModule = ApiPayloadSerializersModule
                 })
             }
 

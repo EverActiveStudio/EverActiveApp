@@ -4,14 +4,17 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
 @Serializable
-sealed interface ApiResult<T: Any> {
+sealed interface ApiPayload
+
+@Serializable
+sealed interface ApiResult<T: ApiPayload> {
     @Serializable
     @SerialName("success")
-    data class Success<T: Any>(val data: T) : ApiResult<T>
+    data class Success<T: ApiPayload>(val data: T) : ApiResult<T>
 
     @Serializable
     @SerialName("error")
-    data class Error<T: Any>(val errorType: Type, val message: String = "") : ApiResult<T> {
+    data class Error<T: ApiPayload>(val errorType: Type, val message: String = "") : ApiResult<T> {
         enum class Type {
             Generic,
             Validation,
