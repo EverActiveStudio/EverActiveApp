@@ -25,5 +25,7 @@ val mainModule = module {
     singleOf(::EveractiveApiClient)
 
     singleOf(::AlertManager)
-    singleOf(::RuleNotificationService)
+    singleOf(::RuleNotificationService) {
+        createdAtStart()
+    }
 }

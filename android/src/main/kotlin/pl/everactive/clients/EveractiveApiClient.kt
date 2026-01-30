@@ -25,6 +25,10 @@ class EveractiveApiClient(
 
     val triggeredRules: StateFlow<List<Rule>> = mutableTriggeredRules.asStateFlow()
 
+    fun resetRules() {
+        mutableTriggeredRules.value = emptyList()
+    }
+
     suspend fun login(email: String, rawPassword: String) {
         token.clear()
 
