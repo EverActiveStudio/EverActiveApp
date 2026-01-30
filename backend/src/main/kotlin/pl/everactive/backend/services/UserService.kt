@@ -59,7 +59,7 @@ class UserService(
         userRepository.findByEmail(username)
             ?: throw UsernameNotFoundException.fromUsername(username)
 
-    fun register(request: RegisterRequest, role: Role = Role.User): RegistrationResult { // Dodano parametr role
+    fun register(request: RegisterRequest): RegistrationResult { // Dodano parametr role
         val validationResult = RegisterRequest.validate(request)
         if (validationResult is Invalid) {
             return RegistrationResult.Failure(validationResult.errors.first().message)
@@ -73,7 +73,7 @@ class UserService(
             email = request.email,
             name = request.name,
             password = passwordEncoder.encode(request.password)!!,
-            role = role // Użycie przekazanej roli
+            role = Role.User,
         )
 
         userRepository.save(user)
