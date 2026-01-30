@@ -30,6 +30,15 @@
             </intent-filter>
         </activity>
 
+        <receiver
+            android:name=".services.NotificationReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="pl.everactive.action.DISMISS" />
+                <action android:name="pl.everactive.action.NOTIFICATION_DELETED" />
+            </intent-filter>
+        </receiver>
+
         <service
             android:name=".services.SafetyMonitoringService"
             android:enabled="true"

@@ -147,6 +147,7 @@ class SafetyMonitoringService : Service(), SensorEventListener, LocationListener
     private fun startMonitoring() {
         if (isMonitoring) return
         isMonitoring = true
+        apiClient.resetRules()
 
         try {
             val notification = createNotification()

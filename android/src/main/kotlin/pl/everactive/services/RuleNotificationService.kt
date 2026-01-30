@@ -3,16 +3,15 @@ package pl.everactive.services
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
+import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.os.Build
 import androidx.core.app.NotificationCompat
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.SupervisorJob
+import androidx.core.content.ContextCompat
+import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.launch
 import pl.everactive.MainActivity
 import pl.everactive.R
 import pl.everactive.clients.EveractiveApiClient
@@ -28,6 +27,17 @@ class RuleNotificationService(
     private var observeJob: Job? = null
     private var lastTriggeredRules: Set<Rule> = emptySet()
     private val notificationId = AtomicInteger(2000)
+    private val activeNotificationIds = mutableSetOf<Int>()
+
+    private val reshowReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            if (intent?.action == NotificationReceiver.ACTION_RESHOW) {
+                if (lastTriggeredRules.isNotEmpty()) {
+                    showNotification(lastTriggeredRules.toList())
+                }
+            }
+        }
+    }
 
     companion object {
         private const val CHANNEL_ID = "rule_notifications"
@@ -37,9 +47,16 @@ class RuleNotificationService(
     fun start() {
         if (observeJob != null) return
         createNotificationChannel()
+
+        runCatching {
+            val filter = IntentFilter(NotificationReceiver.ACTION_RESHOW)
+            ContextCompat.registerReceiver(context, reshowReceiver, filter, ContextCompat.RECEIVER_NOT_EXPORTED)
+        }
+
         observeJob = scope.launch {
             apiClient.triggeredRules.collectLatest { rules ->
                 if (rules.isEmpty()) {
+                    cancelAllNotifications()
                     lastTriggeredRules = emptySet()
                     return@collectLatest
                 }
@@ -55,6 +72,9 @@ class RuleNotificationService(
     }
 
     fun stop() {
+        runCatching {
+            context.unregisterReceiver(reshowReceiver)
+        }
         observeJob?.cancel()
         observeJob = null
     }
@@ -92,24 +112,59 @@ class RuleNotificationService(
             inboxStyle.addLine("...i ${newRules.size - 5} wiecej")
         }
 
+        val id = notificationId.incrementAndGet()
+        activeNotificationIds.add(id)
+
+        val ignoreIntent = Intent(context, NotificationReceiver::class.java).apply {
+            action = NotificationReceiver.ACTION_DISMISS
+            putExtra(NotificationReceiver.EXTRA_NOTIFICATION_ID, id)
+        }
+        val ignorePendingIntent = PendingIntent.getBroadcast(
+            context,
+            id,
+            ignoreIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+        )
+
+        val deleteIntent = Intent(context, NotificationReceiver::class.java).apply {
+            action = NotificationReceiver.ACTION_DELETED
+        }
+        val deletePendingIntent = PendingIntent.getBroadcast(
+            context,
+            id,
+            deleteIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+        )
+
         val notification = NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_launcher_foreground)
             .setContentTitle(title)
             .setContentText(content)
             .setStyle(inboxStyle)
             .setContentIntent(pendingIntent)
-            .setAutoCancel(true)
+            .setAutoCancel(false)
+            .setOngoing(true)
+            .setDeleteIntent(deletePendingIntent)
+            .addAction(0, "Zignoruj", ignorePendingIntent)
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .build()
 
         val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        notificationManager.notify(notificationId.incrementAndGet(), notification)
+        notificationManager.notify(id, notification)
     }
 
     private fun formatRule(rule: Rule): String = when (rule) {
         is Rule.NotMoved -> "Brak ruchu przez ${rule.durationMinutes} min"
         is Rule.MissingUpdates -> "Brak aktualizacji przez ${rule.durationMinutes} min"
         is Rule.GeofenceBox -> "Wyjscie poza strefe"
+    }
+
+    private fun cancelAllNotifications() {
+        val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        activeNotificationIds.forEach { id ->
+            manager.cancel(id)
+        }
+        activeNotificationIds.clear()
     }
 
     private fun createNotificationChannel() {
